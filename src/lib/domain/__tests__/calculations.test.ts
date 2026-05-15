@@ -5,6 +5,7 @@ import {
   getEstimatedCostToPity,
   getMonthRange,
   getMonthlySpend,
+  probAt,
   getRemainingPulls,
   getSessionWarning,
 } from "@/lib/domain/calculations";
@@ -62,5 +63,13 @@ describe("GachaGuard calculations", () => {
     expect(getRemainingPulls(67, 80)).toBe(13);
     expect(getRemainingPulls(90, 80)).toBe(0);
     expect(getEstimatedCostToPity(67, 80, 1200)).toBe(15600);
+  });
+
+  it("ramps probability after soft pity", () => {
+    const opts = { baseRate: 0.006, softPity: 74, hardPity: 90 };
+
+    expect(probAt(10, opts)).toBe(0.006);
+    expect(probAt(74, opts)).toBeGreaterThan(0.006);
+    expect(probAt(90, opts)).toBe(1);
   });
 });

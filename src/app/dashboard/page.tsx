@@ -1,19 +1,13 @@
-import { redirect } from "next/navigation";
-
+import { AppShell } from "@/components/app/app-shell";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
-import { getDashboardData } from "@/lib/dashboard-data";
-import { hasSupabaseEnv } from "@/lib/supabase/env";
+import { getAppDataOrRedirect } from "@/lib/page-data";
 
 export default async function DashboardPage() {
-  const data = await getDashboardData();
+  const data = await getAppDataOrRedirect();
 
-  if (!data && hasSupabaseEnv()) {
-    redirect("/");
-  }
-
-  if (!data) {
-    return null;
-  }
-
-  return <DashboardShell data={data} />;
+  return (
+    <AppShell data={data} active="dashboard" crumb="Dashboard">
+      <DashboardShell data={data} />
+    </AppShell>
+  );
 }

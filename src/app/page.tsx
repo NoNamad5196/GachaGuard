@@ -39,32 +39,31 @@ export default async function Home({
     <main className="min-h-screen bg-background">
       <div className="mx-auto grid min-h-screen w-full max-w-6xl items-center gap-8 px-4 py-8 md:grid-cols-[1.05fr_0.95fr]">
         <section className="space-y-8">
-          <div className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm text-muted-foreground">
-            <ShieldCheck className="h-4 w-4 text-primary" />
-            Supabase RLS 기반 개인 과금 가드
+          <div className="inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1 text-sm text-muted-foreground">
+            <ShieldCheck className="h-4 w-4 text-[var(--brand)]" />
+            Supabase RLS 기반 개인 가드레일
           </div>
           <div className="space-y-4">
             <h1 className="max-w-2xl text-4xl font-semibold tracking-tight sm:text-5xl">
-              과금 버튼을 누르기 전에, 숫자가 먼저 말하게 하세요.
+              뽑기 전에 숫자가 먼저 말하게 하세요.
             </h1>
             <p className="max-w-xl text-base leading-7 text-muted-foreground">
-              GachaGuard는 게임별 과금, 월 예산, 천장까지 남은 비용을 한 화면에
-              모아 충동적인 결제를 늦추는 개인 대시보드입니다.
+              GachaGuard는 배너, 피티, 지출, 예산 경고를 한곳에 모아 충동적인 결제를 줄이는
+              개인 대시보드입니다.
             </p>
           </div>
           <div className="grid gap-3 text-sm text-muted-foreground sm:grid-cols-3">
-            <div className="rounded-lg border bg-card/60 p-4">70% 경고선</div>
-            <div className="rounded-lg border bg-card/60 p-4">천장 예상 비용</div>
-            <div className="rounded-lg border bg-card/60 p-4">세션 마찰 모달</div>
+            <div className="rounded-lg border bg-card p-4">예산 경고</div>
+            <div className="rounded-lg border bg-card p-4">천장 예상 비용</div>
+            <div className="rounded-lg border bg-card p-4">뽑기 로그</div>
           </div>
         </section>
 
-        <Card className="w-full">
+        <Card className="w-full rounded-lg">
           <CardHeader>
             <CardTitle>로그인</CardTitle>
             <CardDescription>
-              이메일 매직 링크로 시작합니다. 환경 변수가 없으면 데모를 먼저 볼 수
-              있습니다.
+              이메일 매직 링크로 시작합니다. 환경 변수가 없으면 데모를 먼저 볼 수 있습니다.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

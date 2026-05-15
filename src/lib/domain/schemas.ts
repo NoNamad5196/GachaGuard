@@ -1,11 +1,30 @@
 import { z } from "zod";
 
+const formBoolean = z.preprocess((value) => {
+  if (value === "true" || value === "on" || value === true) {
+    return true;
+  }
+
+  if (value === "false" || value === "off" || value === false) {
+    return false;
+  }
+
+  return undefined;
+}, z.boolean());
+
 export const paymentTypeSchema = z.enum([
   "gacha",
   "pass",
   "coin",
   "event",
   "other",
+]);
+
+export const guardrailRuleKindSchema = z.enum([
+  "warning",
+  "hard_stop",
+  "cooldown",
+  "daily_cap",
 ]);
 
 const positiveKrw = z.coerce
@@ -51,6 +70,43 @@ export const gachaLogSchema = z.object({
   result: z.string().trim().max(300).optional(),
   pityAtPull: z.coerce.number().int().min(0),
   pulledAt: z.string().datetime().optional(),
+});
+
+export const trackBannerSchema = z.object({
+  bannerId: z.string().uuid(),
+});
+
+export const pullSessionSchema = z.object({
+  userBannerId: z.string().uuid(),
+  pullsCount: z.coerce.number().int().min(1).max(100),
+  rarity: z.coerce.number().int().min(3).max(5).default(3),
+  itemName: z.string().trim().max(120).optional(),
+  costPerPull: z.coerce.number().int().min(0).default(0),
+  isRateUp: formBoolean.optional(),
+  memo: z.string().trim().max(300).optional(),
+  pulledAt: z.string().datetime().optional(),
+});
+
+export const updatePullSchema = z.object({
+  id: z.string().uuid(),
+  rarity: z.coerce.number().int().min(3).max(5),
+  itemName: z.string().trim().max(120).optional(),
+  isRateUp: formBoolean.optional(),
+});
+
+export const guardrailRuleSchema = z.object({
+  id: z.string().uuid().optional(),
+  kind: guardrailRuleKindSchema,
+  name: z.string().trim().min(1).max(120),
+  thresholdAmount: z.coerce.number().int().min(0).optional(),
+  thresholdPercent: z.coerce.number().int().min(1).max(200).optional(),
+  cooldownDays: z.coerce.number().int().min(1).max(30).optional(),
+  enabled: formBoolean.default(true),
+});
+
+export const toggleGuardrailRuleSchema = z.object({
+  id: z.string().uuid(),
+  enabled: formBoolean,
 });
 
 export const templateSchema = z.object({

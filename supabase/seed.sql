@@ -18,3 +18,47 @@ set name = excluded.name,
     hard_pity = excluded.hard_pity,
     base_cost = excluded.base_cost,
     has_guarantee = excluded.has_guarantee;
+
+insert into public.banners (
+  game_id,
+  name,
+  banner_type,
+  featured,
+  starts_at,
+  ends_at,
+  soft_pity,
+  hard_pity,
+  base_rate,
+  rate_up,
+  is_active
+)
+select
+  games.id,
+  seed.name,
+  seed.banner_type::public.banner_type,
+  seed.featured,
+  seed.starts_at::timestamptz,
+  seed.ends_at::timestamptz,
+  seed.soft_pity,
+  seed.hard_pity,
+  seed.base_rate,
+  seed.rate_up,
+  true
+from (
+  values
+    ('genshin-impact', '푸른 서약', 'character', '푸리나', '2026-05-01T00:00:00+09', '2026-05-28T23:59:59+09', 75, 90, 0.006, 0.5),
+    ('genshin-impact', '무기 기원: 고요한 파도', 'weapon', '물빛의 의장', '2026-05-01T00:00:00+09', '2026-05-28T23:59:59+09', 63, 80, 0.007, 0.75),
+    ('blue-archive', '방과 후의 약속', 'character', '호시노', '2026-05-09T00:00:00+09', '2026-05-30T23:59:59+09', 150, 200, 0.007, 0.5),
+    ('wuthering-waves', '바람이 머무는 해안', 'character', '카르테시아', '2026-05-08T00:00:00+09', '2026-05-22T23:59:59+09', 65, 80, 0.008, 0.5)
+) as seed(slug, name, banner_type, featured, starts_at, ends_at, soft_pity, hard_pity, base_rate, rate_up)
+join public.games on games.slug = seed.slug
+on conflict (game_id, name, ends_at) do update
+set banner_type = excluded.banner_type,
+    featured = excluded.featured,
+    starts_at = excluded.starts_at,
+    soft_pity = excluded.soft_pity,
+    hard_pity = excluded.hard_pity,
+    base_rate = excluded.base_rate,
+    rate_up = excluded.rate_up,
+    is_active = excluded.is_active,
+    updated_at = now();

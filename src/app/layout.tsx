@@ -6,13 +6,13 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "GachaGuard",
-  description: "가챠 게임 과금을 기록하고 예산 초과를 막는 개인 지출 가드.",
+  description: "가챠 게임 지출, 피티, 배너 기록을 관리하는 개인 가드레일",
   manifest: "/manifest.webmanifest",
   applicationName: "GachaGuard",
   appleWebApp: {
     capable: true,
     title: "GachaGuard",
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
   },
 };
 
@@ -22,8 +22,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko" className="dark h-full antialiased">
-      <body className="min-h-full flex flex-col">
+    <html lang="ko" className="h-full antialiased">
+      <body className="flex min-h-full flex-col">
         <TooltipProvider>{children}</TooltipProvider>
         <Analytics />
       </body>

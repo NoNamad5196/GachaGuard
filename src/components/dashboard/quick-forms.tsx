@@ -59,7 +59,7 @@ export function AddGameForm({ data }: { data: DashboardData }) {
           id="gameId"
           name="gameId"
           disabled={data.isDemo || availableGames.length === 0}
-          className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+          className="h-9 rounded-md border border-input bg-background px-3 text-sm"
           required
         >
           {availableGames.map((game) => (
@@ -82,7 +82,7 @@ export function AddGameForm({ data }: { data: DashboardData }) {
           />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="currentPity">현재 뽑기 카운트</Label>
+          <Label htmlFor="currentPity">현재 피티</Label>
           <Input
             id="currentPity"
             name="currentPity"
@@ -105,7 +105,7 @@ export function TemplateApplyForm({ isDemo }: { isDemo: boolean }) {
   return (
     <form action={applyMonthlyTemplates}>
       <Button type="submit" variant="secondary" className="w-full" disabled={isDemo}>
-        이번 달 반복 패스 반영
+        이번 달 반복 결제 반영
       </Button>
     </form>
   );
@@ -129,7 +129,7 @@ export function GachaLogInlineForm({
           defaultValue={userGame.current_pity}
           disabled={isDemo}
           className="metric-tabular"
-          aria-label={`${userGame.games.name} 현재 천장 카운트`}
+          aria-label={`${userGame.games.name} 현재 피티`}
         />
         <Button type="submit" variant="secondary" disabled={isDemo}>
           갱신
