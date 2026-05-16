@@ -134,6 +134,13 @@ export interface Database {
           paid_at: string;
           memo: string | null;
           regret_score: number | null;
+          source: string;
+          external_order_id: string | null;
+          import_fingerprint: string | null;
+          merchant: string | null;
+          raw_description: string | null;
+          currency: string;
+          imported_at: string | null;
         } & Timestamped,
         {
           id?: string;
@@ -144,6 +151,13 @@ export interface Database {
           paid_at?: string;
           memo?: string | null;
           regret_score?: number | null;
+          source?: string;
+          external_order_id?: string | null;
+          import_fingerprint?: string | null;
+          merchant?: string | null;
+          raw_description?: string | null;
+          currency?: string;
+          imported_at?: string | null;
           created_at?: string;
           updated_at?: string;
         },

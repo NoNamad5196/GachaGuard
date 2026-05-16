@@ -169,13 +169,19 @@ const userBanners: UserBanner[] = [
   },
 ];
 
-export function getDemoDashboardData(): DashboardData {
+export function getDemoDashboardData({
+  authEnabled = false,
+}: {
+  authEnabled?: boolean;
+} = {}): DashboardData {
   const range = getMonthRange();
   const paidAt = (day: number, hour = 12) =>
     new Date(range.start.getTime() + (day - 1) * 86_400_000 + hour * 3_600_000).toISOString();
 
   return {
     isDemo: true,
+    authEnabled,
+    isAuthenticated: false,
     yearMonth: range.yearMonth,
     profile: {
       id: "demo-user",
@@ -204,6 +210,13 @@ export function getDemoDashboardData(): DashboardData {
         paid_at: paidAt(3),
         memo: "픽업 10연차 전 충전",
         regret_score: 2,
+        source: "manual",
+        external_order_id: null,
+        import_fingerprint: null,
+        merchant: null,
+        raw_description: null,
+        currency: "KRW",
+        imported_at: null,
         user_games: { games: userGames[1].games },
       },
       {
@@ -215,6 +228,13 @@ export function getDemoDashboardData(): DashboardData {
         paid_at: paidAt(6),
         memo: "초회 보너스 충전",
         regret_score: 4,
+        source: "manual",
+        external_order_id: null,
+        import_fingerprint: null,
+        merchant: null,
+        raw_description: null,
+        currency: "KRW",
+        imported_at: null,
         user_games: { games: userGames[0].games },
       },
       {
@@ -226,6 +246,13 @@ export function getDemoDashboardData(): DashboardData {
         paid_at: paidAt(8),
         memo: "월간 패스",
         regret_score: 5,
+        source: "manual",
+        external_order_id: null,
+        import_fingerprint: null,
+        merchant: null,
+        raw_description: null,
+        currency: "KRW",
+        imported_at: null,
         user_games: { games: userGames[2].games },
       },
       {
@@ -237,6 +264,13 @@ export function getDemoDashboardData(): DashboardData {
         paid_at: paidAt(13),
         memo: "천장까지 조금만",
         regret_score: 1,
+        source: "manual",
+        external_order_id: null,
+        import_fingerprint: null,
+        merchant: null,
+        raw_description: null,
+        currency: "KRW",
+        imported_at: null,
         user_games: { games: userGames[1].games },
       },
     ],

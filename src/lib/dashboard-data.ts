@@ -26,9 +26,10 @@ const USER_BANNER_SELECT = `*, banners(${BANNER_SELECT}), user_games(${USER_GAME
 
 export async function getDashboardData(): Promise<DashboardData | null> {
   const range = getMonthRange();
+  const authEnabled = hasSupabaseEnv();
 
-  if (!hasSupabaseEnv()) {
-    return getDemoDashboardData();
+  if (!authEnabled) {
+    return getDemoDashboardData({ authEnabled: false });
   }
 
   const supabase = await createClient();
@@ -37,7 +38,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return getDemoDashboardData();
+    return getDemoDashboardData({ authEnabled: true });
   }
 
   const [
@@ -141,6 +142,8 @@ export async function getDashboardData(): Promise<DashboardData | null> {
 
   return {
     isDemo: false,
+    authEnabled: true,
+    isAuthenticated: true,
     yearMonth: range.yearMonth,
     profile: (profileResult.data as ProfileRecord | null) ?? fallbackProfile,
     budget: budgetResult.data as BudgetRecord | null,

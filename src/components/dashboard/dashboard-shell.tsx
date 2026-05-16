@@ -6,6 +6,7 @@ import {
   Gauge,
   ShieldCheck,
   Target,
+  Upload,
   WalletCards,
 } from "lucide-react";
 
@@ -36,7 +37,13 @@ import {
 import { PaymentForm } from "@/components/dashboard/payment-form";
 import { SpendCharts } from "@/components/dashboard/spend-charts";
 
-export function DashboardShell({ data }: { data: DashboardData }) {
+export function DashboardShell({
+  data,
+  authState,
+}: {
+  data: DashboardData;
+  authState?: string;
+}) {
   const monthlySpend = getMonthlySpend(data.payments);
   const fallbackBudget = data.userGames.reduce(
     (total, userGame) => total + userGame.monthly_budget,
@@ -63,9 +70,19 @@ export function DashboardShell({ data }: { data: DashboardData }) {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/imports/google">
+              <Upload className="size-4" />
+              Google 결제 가져오기
+            </Link>
+          </Button>
           <ToneBadge tone={data.isDemo ? "warn" : "safe"}>
             <ShieldCheck className="size-3" />
-            {data.isDemo ? "Demo Mode" : "Supabase 보호 중"}
+            {data.isAuthenticated
+              ? "Supabase 보호 중"
+              : data.authEnabled
+                ? "로그인하면 저장 가능"
+                : "Demo Mode"}
           </ToneBadge>
           <ToneBadge>{data.yearMonth}</ToneBadge>
         </div>
@@ -76,7 +93,9 @@ export function DashboardShell({ data }: { data: DashboardData }) {
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>데모 데이터로 미리보기 중</AlertTitle>
           <AlertDescription>
-            Supabase 환경 변수를 연결하고 마이그레이션을 적용하면 저장 기능이 활성화됩니다.
+            {data.authEnabled
+              ? "로그인하면 결제, 예산, 뽑기 기록을 개인 데이터로 저장할 수 있습니다."
+              : "Supabase 환경 변수를 연결하고 마이그레이션을 적용하면 저장 기능이 활성화됩니다."}
           </AlertDescription>
         </Alert>
       ) : null}
@@ -180,6 +199,9 @@ export function DashboardShell({ data }: { data: DashboardData }) {
               todaySpent={todaySpent}
               sessionWarningAmount={data.profile.session_warning_amount}
               isDemo={data.isDemo}
+              authEnabled={data.authEnabled}
+              isAuthenticated={data.isAuthenticated}
+              authState={authState}
             />
           </DesignCard>
 

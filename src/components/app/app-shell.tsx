@@ -5,6 +5,7 @@ import {
   CircleDollarSign,
   Layers,
   ListChecks,
+  LogIn,
   LogOut,
   Plus,
   Settings,
@@ -14,6 +15,7 @@ import {
 import type { ReactNode } from "react";
 
 import { signOut } from "@/app/actions";
+import { getAuthRedirectPath } from "@/lib/auth/redirects";
 import type { DashboardData } from "@/lib/domain/dashboard";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -37,13 +39,21 @@ export function AppShell({
   data,
   active,
   crumb,
+  authNextPath,
   children,
 }: {
   data: DashboardData;
   active: AppRoute;
   crumb: string;
+  authNextPath?: string;
   children: ReactNode;
 }) {
+  const loginNextPath = authNextPath ?? `/${active === "dashboard" ? "dashboard" : active}`;
+  const headerLoginPath =
+    active === "dashboard" || active === "settings" || authNextPath
+      ? loginNextPath
+      : "/dashboard";
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="mx-auto grid min-h-screen w-full max-w-[1440px] grid-cols-1 lg:grid-cols-[232px_1fr]">
@@ -120,7 +130,11 @@ export function AppShell({
                   {data.profile.display_name ?? "Guard"}
                 </div>
                 <div className="truncate text-xs text-muted-foreground">
-                  {data.isDemo ? "Demo Mode" : "Supabase 보호 중"}
+                  {data.isAuthenticated
+                    ? "Supabase 보호 중"
+                    : data.authEnabled
+                      ? "로그인하면 저장 가능"
+                      : "Demo Mode"}
                 </div>
               </div>
             </div>
@@ -149,11 +163,19 @@ export function AppShell({
               <Button variant="ghost" size="icon" aria-label="알림">
                 <Bell className="size-4" />
               </Button>
-              <form action={signOut}>
-                <Button type="submit" variant="ghost" size="icon" aria-label="로그아웃">
-                  <LogOut className="size-4" />
+              {data.isAuthenticated ? (
+                <form action={signOut}>
+                  <Button type="submit" variant="ghost" size="icon" aria-label="로그아웃">
+                    <LogOut className="size-4" />
+                  </Button>
+                </form>
+              ) : (
+                <Button asChild variant="ghost" size="icon" aria-label="로그인">
+                  <Link href={getAuthRedirectPath({ auth: "required", next: headerLoginPath })}>
+                    <LogIn className="size-4" />
+                  </Link>
                 </Button>
-              </form>
+              )}
             </div>
           </header>
 

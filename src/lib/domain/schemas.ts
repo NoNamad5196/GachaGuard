@@ -59,6 +59,23 @@ export const updatePaymentSchema = paymentSchema.partial().extend({
   id: z.string().uuid(),
 });
 
+export const googlePaymentImportRowSchema = z.object({
+  userGameId: z.string().uuid(),
+  amount: positiveKrw,
+  type: paymentTypeSchema,
+  paidAt: z.string().datetime(),
+  source: z.enum(["google_play", "google_pay"]),
+  externalOrderId: z.string().trim().max(160).nullable().optional(),
+  importFingerprint: z.string().trim().min(12).max(180),
+  merchant: z.string().trim().max(160).nullable().optional(),
+  rawDescription: z.string().trim().min(1).max(600),
+  currency: z.literal("KRW"),
+});
+
+export const googlePaymentImportSchema = z.object({
+  rows: z.array(googlePaymentImportRowSchema).min(1).max(500),
+});
+
 export const pitySchema = z.object({
   userGameId: z.string().uuid(),
   currentPity: z.coerce.number().int().min(0),

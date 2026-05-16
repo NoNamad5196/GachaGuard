@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(16);
+select plan(18);
 
 insert into auth.users (id, email)
 values
@@ -60,6 +60,27 @@ values (
   'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
   11000,
   'gacha'
+);
+
+insert into public.payments (
+  user_id,
+  user_game_id,
+  amount,
+  type,
+  source,
+  import_fingerprint,
+  external_order_id,
+  raw_description
+)
+values (
+  '11111111-1111-4111-8111-111111111111',
+  'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+  33000,
+  'coin',
+  'google_play',
+  'rls-import-owner',
+  'GPA.1111-2222',
+  'Google Play RLS import'
 );
 
 insert into public.user_banners (
@@ -127,11 +148,18 @@ values (
 );
 
 select is((select count(*)::int from public.user_games), 1, 'owner can read own user_games');
-select is((select count(*)::int from public.payments), 1, 'owner can read own payments');
+select is((select count(*)::int from public.payments), 2, 'owner can read own payments');
 select is((select count(*)::int from public.user_banners), 1, 'owner can read own user_banners');
 select is((select count(*)::int from public.pull_sessions), 1, 'owner can read own pull_sessions');
 select is((select count(*)::int from public.pulls), 1, 'owner can read own pulls');
 select is((select count(*)::int from public.guardrail_rules), 1, 'owner can read own guardrail_rules');
+select throws_ok(
+  $$insert into public.payments (user_id, user_game_id, amount, type, source, import_fingerprint)
+    values ('11111111-1111-4111-8111-111111111111', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 33000, 'coin', 'google_play', 'rls-import-owner')$$,
+  '23505',
+  null,
+  'duplicate import fingerprint is blocked per user'
+);
 
 select set_config('request.jwt.claim.sub', '22222222-2222-4222-8222-222222222222', true);
 
@@ -147,6 +175,13 @@ select throws_ok(
   '42501',
   null,
   'other user cannot write into another user_game'
+);
+select throws_ok(
+  $$insert into public.payments (user_id, user_game_id, amount, type, source, import_fingerprint)
+    values ('22222222-2222-4222-8222-222222222222', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 33000, 'coin', 'google_play', 'rls-import-other')$$,
+  '42501',
+  null,
+  'other user cannot write imported payment into another user_game'
 );
 select throws_ok(
   $$insert into public.user_banners (user_id, user_game_id, banner_id)

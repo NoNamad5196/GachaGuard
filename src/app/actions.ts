@@ -5,10 +5,16 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import {
+  getAuthOrigin,
+  getAuthRedirectPath,
+  sanitizeNextPath,
+} from "@/lib/auth/redirects";
 import { getMonthRange } from "@/lib/domain/calculations";
 import {
   budgetSchema,
   gachaLogSchema,
+  googlePaymentImportSchema,
   guardrailRuleSchema,
   paymentSchema,
   pitySchema,
@@ -33,9 +39,9 @@ function normalizeFormData(formData: FormData) {
   );
 }
 
-async function requireSession() {
+async function requireSession(nextPath = "/dashboard") {
   if (!hasSupabaseEnv()) {
-    throw new Error("Supabase 환경 변수가 없어 데모 모드로 실행 중입니다.");
+    redirect(getAuthRedirectPath({ auth: "demo", next: nextPath }));
   }
 
   const supabase = await createClient();
@@ -45,41 +51,51 @@ async function requireSession() {
   } = await supabase.auth.getUser();
 
   if (error || !user) {
-    redirect("/");
+    redirect(getAuthRedirectPath({ auth: "required", next: nextPath }));
   }
 
   return { supabase, user };
 }
 
 export async function requestMagicLink(formData: FormData) {
+  const nextPath = sanitizeNextPath(formData.get("next"));
+
   if (!hasSupabaseEnv()) {
-    redirect("/?auth=demo");
+    redirect(getAuthRedirectPath({ auth: "demo", next: nextPath }));
   }
 
   const email = String(formData.get("email") ?? "").trim();
   if (!email) {
-    redirect("/?auth=missing-email");
+    redirect(getAuthRedirectPath({ auth: "missing-email", next: nextPath }));
   }
 
   const requestHeaders = await headers();
-  const origin =
-    requestHeaders.get("origin") ??
-    process.env.NEXT_PUBLIC_SITE_URL ??
-    "http://localhost:3000";
+  const origin = getAuthOrigin({
+    requestOrigin: requestHeaders.get("origin"),
+    siteUrl: process.env.NEXT_PUBLIC_SITE_URL,
+    vercelUrl: process.env.NEXT_PUBLIC_VERCEL_URL ?? process.env.VERCEL_URL,
+  });
+  const callbackUrl = new URL("/auth/callback", origin);
+  callbackUrl.searchParams.set("next", nextPath);
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: `${origin}/auth/callback?next=/dashboard`,
+      emailRedirectTo: callbackUrl.toString(),
     },
   });
 
   if (error) {
-    redirect("/?auth=error");
+    console.error("[auth] Magic link send failed", {
+      name: error.name,
+      message: error.message,
+      status: "status" in error ? error.status : undefined,
+    });
+    redirect(getAuthRedirectPath({ auth: "send-error", next: nextPath }));
   }
 
-  redirect("/?auth=sent");
+  redirect(getAuthRedirectPath({ auth: "sent", next: nextPath }));
 }
 
 export async function signOut() {
@@ -88,11 +104,11 @@ export async function signOut() {
     await supabase.auth.signOut();
   }
 
-  redirect("/");
+  redirect("/dashboard");
 }
 
 export async function upsertBudget(formData: FormData) {
-  const { supabase, user } = await requireSession();
+  const { supabase, user } = await requireSession("/budget");
   const input = budgetSchema.parse(normalizeFormData(formData));
 
   const { error } = await supabase.from("budgets").upsert(
@@ -113,7 +129,7 @@ export async function upsertBudget(formData: FormData) {
 }
 
 export async function addUserGame(formData: FormData) {
-  const { supabase, user } = await requireSession();
+  const { supabase, user } = await requireSession("/settings");
   const input = userGameSchema.parse(normalizeFormData(formData));
 
   const { error } = await supabase.from("user_games").upsert(
@@ -137,7 +153,7 @@ export async function addUserGame(formData: FormData) {
 }
 
 export async function updatePity(formData: FormData) {
-  const { supabase } = await requireSession();
+  const { supabase } = await requireSession("/dashboard");
   const input = pitySchema.parse(normalizeFormData(formData));
 
   const { error } = await supabase
@@ -153,7 +169,7 @@ export async function updatePity(formData: FormData) {
 }
 
 export async function createPayment(formData: FormData) {
-  const { supabase, user } = await requireSession();
+  const { supabase, user } = await requireSession("/dashboard");
   const input = paymentSchema.parse(normalizeFormData(formData));
 
   const { error } = await supabase.from("payments").insert({
@@ -174,7 +190,7 @@ export async function createPayment(formData: FormData) {
 }
 
 export async function updatePayment(formData: FormData) {
-  const { supabase } = await requireSession();
+  const { supabase } = await requireSession("/dashboard");
   const input = updatePaymentSchema.parse(normalizeFormData(formData));
 
   const { id, userGameId, paidAt, regretScore, ...rest } = input;
@@ -196,7 +212,7 @@ export async function updatePayment(formData: FormData) {
 }
 
 export async function deletePayment(formData: FormData) {
-  const { supabase } = await requireSession();
+  const { supabase } = await requireSession("/dashboard");
   const id = String(formData.get("id") ?? "");
 
   const { error } = await supabase.from("payments").delete().eq("id", id);
@@ -208,8 +224,91 @@ export async function deletePayment(formData: FormData) {
   revalidatePath("/dashboard");
 }
 
+export async function importGooglePayments(payload: unknown) {
+  const { supabase, user } = await requireSession("/imports/google");
+  const input = googlePaymentImportSchema.parse(payload);
+  const userGameIds = Array.from(new Set(input.rows.map((row) => row.userGameId)));
+
+  const { data: ownedUserGames, error: userGamesError } = await supabase
+    .from("user_games")
+    .select("id")
+    .eq("user_id", user.id)
+    .in("id", userGameIds);
+
+  if (userGamesError) {
+    throw userGamesError;
+  }
+
+  const ownedIds = new Set((ownedUserGames ?? []).map((userGame) => userGame.id));
+  if (userGameIds.some((id) => !ownedIds.has(id))) {
+    throw new Error("선택한 게임을 확인할 수 없습니다.");
+  }
+
+  const fingerprints = Array.from(new Set(input.rows.map((row) => row.importFingerprint)));
+  const { data: existingRows, error: existingError } = await supabase
+    .from("payments")
+    .select("import_fingerprint")
+    .eq("user_id", user.id)
+    .in("import_fingerprint", fingerprints);
+
+  if (existingError) {
+    throw existingError;
+  }
+
+  const existingFingerprints = new Set(
+    (existingRows ?? [])
+      .map((row) => row.import_fingerprint)
+      .filter((fingerprint): fingerprint is string => Boolean(fingerprint)),
+  );
+  const seen = new Set<string>();
+  const rowsToInsert = input.rows.filter((row) => {
+    if (existingFingerprints.has(row.importFingerprint) || seen.has(row.importFingerprint)) {
+      return false;
+    }
+
+    seen.add(row.importFingerprint);
+    return true;
+  });
+
+  if (rowsToInsert.length > 0) {
+    const importedAt = new Date().toISOString();
+    const { error } = await supabase.from("payments").insert(
+      rowsToInsert.map((row) => ({
+        user_id: user.id,
+        user_game_id: row.userGameId,
+        amount: row.amount,
+        type: row.type,
+        paid_at: row.paidAt,
+        memo: buildGooglePaymentMemo(row),
+        regret_score: null,
+        source: row.source,
+        external_order_id: row.externalOrderId ?? null,
+        import_fingerprint: row.importFingerprint,
+        merchant: row.merchant ?? null,
+        raw_description: row.rawDescription,
+        currency: row.currency,
+        imported_at: importedAt,
+      })),
+    );
+
+    if (error) {
+      throw error;
+    }
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/budget");
+  revalidatePath("/settings");
+  revalidatePath("/imports/google");
+
+  return {
+    inserted: rowsToInsert.length,
+    skippedDuplicates: input.rows.length - rowsToInsert.length,
+  };
+}
+
 export async function createGachaLog(formData: FormData) {
-  const { supabase, user } = await requireSession();
+  const { supabase, user } = await requireSession("/dashboard");
   const input = gachaLogSchema.parse(normalizeFormData(formData));
 
   const { error } = await supabase.from("gacha_logs").insert({
@@ -234,7 +333,7 @@ export async function createGachaLog(formData: FormData) {
 }
 
 export async function createPaymentTemplate(formData: FormData) {
-  const { supabase, user } = await requireSession();
+  const { supabase, user } = await requireSession("/settings");
   const input = templateSchema.parse(normalizeFormData(formData));
 
   const { error } = await supabase.from("payment_templates").insert({
@@ -254,7 +353,7 @@ export async function createPaymentTemplate(formData: FormData) {
 }
 
 export async function applyMonthlyTemplates() {
-  const { supabase, user } = await requireSession();
+  const { supabase, user } = await requireSession("/settings");
   const { yearMonth, year, month } = getMonthRange();
 
   const { data: templates, error: templateError } = await supabase
@@ -306,7 +405,7 @@ export async function applyMonthlyTemplates() {
 }
 
 export async function trackBanner(formData: FormData) {
-  const { supabase, user } = await requireSession();
+  const { supabase, user } = await requireSession("/banners");
   const input = trackBannerSchema.parse(normalizeFormData(formData));
 
   const { data: banner, error: bannerError } = await supabase
@@ -371,7 +470,7 @@ export async function trackBanner(formData: FormData) {
 }
 
 export async function createPullSession(formData: FormData) {
-  const { supabase, user } = await requireSession();
+  const { supabase, user } = await requireSession("/pulls");
   const input = pullSessionSchema.parse(normalizeFormData(formData));
 
   const { data: userBanner, error: userBannerError } = await supabase
@@ -439,7 +538,7 @@ export async function createPullSession(formData: FormData) {
 }
 
 export async function updatePullResult(formData: FormData) {
-  const { supabase, user } = await requireSession();
+  const { supabase, user } = await requireSession("/pulls");
   const input = updatePullSchema.parse(normalizeFormData(formData));
 
   const { data: pull, error: pullError } = await supabase
@@ -472,7 +571,7 @@ export async function updatePullResult(formData: FormData) {
 }
 
 export async function deletePull(formData: FormData) {
-  const { supabase, user } = await requireSession();
+  const { supabase, user } = await requireSession("/pulls");
   const id = String(formData.get("id") ?? "");
 
   const { data: pull, error: pullError } = await supabase
@@ -501,7 +600,7 @@ export async function deletePull(formData: FormData) {
 }
 
 export async function upsertGuardrailRule(formData: FormData) {
-  const { supabase, user } = await requireSession();
+  const { supabase, user } = await requireSession("/budget");
   const input = guardrailRuleSchema.parse(normalizeFormData(formData));
 
   if (input.id) {
@@ -542,7 +641,7 @@ export async function upsertGuardrailRule(formData: FormData) {
 }
 
 export async function toggleGuardrailRule(formData: FormData) {
-  const { supabase, user } = await requireSession();
+  const { supabase, user } = await requireSession("/budget");
   const input = toggleGuardrailRuleSchema.parse(normalizeFormData(formData));
 
   const { error } = await supabase
@@ -568,6 +667,20 @@ function revalidateTrackedRoutes(bannerId?: string) {
   if (bannerId) {
     revalidatePath(`/banners/${bannerId}`);
   }
+}
+
+function buildGooglePaymentMemo(row: {
+  source: "google_play" | "google_pay";
+  externalOrderId?: string | null;
+  merchant?: string | null;
+  rawDescription: string;
+}) {
+  const sourceLabel = row.source === "google_play" ? "Google Play" : "Google Pay";
+  const detail = [row.merchant, row.rawDescription, row.externalOrderId]
+    .filter(Boolean)
+    .join(" · ");
+
+  return `${sourceLabel} 가져오기${detail ? ` · ${detail}` : ""}`.slice(0, 500);
 }
 
 async function recalculateBannerState(

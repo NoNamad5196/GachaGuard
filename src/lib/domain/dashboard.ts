@@ -66,6 +66,13 @@ export interface PaymentRecord {
   paid_at: string;
   memo: string | null;
   regret_score: number | null;
+  source: string;
+  external_order_id: string | null;
+  import_fingerprint: string | null;
+  merchant: string | null;
+  raw_description: string | null;
+  currency: string;
+  imported_at: string | null;
   user_games?: {
     games?: Pick<GameMaster, "name" | "slug" | "base_cost" | "hard_pity">;
   };
@@ -144,6 +151,8 @@ export interface ProfileRecord {
 
 export interface DashboardData {
   isDemo: boolean;
+  authEnabled: boolean;
+  isAuthenticated: boolean;
   yearMonth: string;
   profile: ProfileRecord;
   budget: BudgetRecord | null;

@@ -1,4 +1,5 @@
-import { Download, Mail, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { Download, Mail, Trash2, Upload } from "lucide-react";
 
 import { formatKrw } from "@/lib/domain/calculations";
 import type { DashboardData } from "@/lib/domain/dashboard";
@@ -10,9 +11,16 @@ import {
   StatBlock,
   ToneBadge,
 } from "@/components/app/design-system";
+import { AuthCta } from "@/components/auth/auth-cta";
 import { AddGameForm, TemplateApplyForm } from "@/components/dashboard/quick-forms";
 
-export function SettingsPage({ data }: { data: DashboardData }) {
+export function SettingsPage({
+  data,
+  authState,
+}: {
+  data: DashboardData;
+  authState?: string;
+}) {
   return (
     <div className="space-y-5" data-screen-label="Settings">
       <section>
@@ -86,6 +94,22 @@ export function SettingsPage({ data }: { data: DashboardData }) {
 
         <DesignCard title="데이터" sub="가져오기/내보내기">
           <div className="grid gap-2">
+            {!data.isAuthenticated ? (
+              <AuthCta
+                authEnabled={data.authEnabled}
+                nextPath="/settings"
+                authState={authState}
+                compact
+                title="로그인하면 설정을 저장할 수 있어요"
+                description="게임, 예산, 결제 가져오기 설정은 계정에 연결된 뒤 저장됩니다."
+              />
+            ) : null}
+            <Button asChild variant="outline">
+              <Link href="/imports/google">
+                <Upload className="size-4" />
+                Google 결제 가져오기
+              </Link>
+            </Button>
             <Button variant="outline" disabled>
               <Download className="size-4" />
               CSV 내보내기
@@ -102,7 +126,16 @@ export function SettingsPage({ data }: { data: DashboardData }) {
         </DesignCard>
       </section>
 
-      <DesignCard title="계정" sub={data.isDemo ? "Demo Mode" : "Supabase 계정"}>
+      <DesignCard
+        title="계정"
+        sub={
+          data.isAuthenticated
+            ? "Supabase 계정"
+            : data.authEnabled
+              ? "비로그인 미리보기"
+              : "Demo Mode"
+        }
+      >
         <div className="grid gap-3 sm:grid-cols-3">
           <Input value={data.profile.display_name ?? ""} readOnly aria-label="표시 이름" />
           <Input value={data.profile.email ?? ""} readOnly aria-label="이메일" />

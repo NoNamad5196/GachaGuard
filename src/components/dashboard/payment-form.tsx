@@ -33,6 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { AuthCta } from "@/components/auth/auth-cta";
 
 const QUICK_AMOUNTS = [1100, 3300, 11000, 33000];
 const PAYMENT_TYPES: PaymentType[] = ["gacha", "pass", "coin", "event", "other"];
@@ -42,11 +43,17 @@ export function PaymentForm({
   todaySpent,
   sessionWarningAmount,
   isDemo,
+  authEnabled,
+  isAuthenticated,
+  authState,
 }: {
   userGames: UserGame[];
   todaySpent: number;
   sessionWarningAmount: number;
   isDemo: boolean;
+  authEnabled: boolean;
+  isAuthenticated: boolean;
+  authState?: string;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [userGameId, setUserGameId] = useState(userGames[0]?.id ?? "");
@@ -56,6 +63,7 @@ export function PaymentForm({
   const [pendingForm, setPendingForm] = useState<FormData | null>(null);
   const [isDialogOpen, setDialogOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const canMutate = !isDemo && isAuthenticated;
 
   const warning = useMemo(
     () =>
@@ -92,21 +100,22 @@ export function PaymentForm({
 
   return (
     <div className="space-y-4">
-      {isDemo ? (
-        <Alert>
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>데모 모드</AlertTitle>
-          <AlertDescription>
-            Supabase 환경 변수를 연결하면 입력과 저장이 활성화됩니다.
-          </AlertDescription>
-        </Alert>
+      {!isAuthenticated ? (
+        <AuthCta
+          authEnabled={authEnabled}
+          nextPath="/dashboard"
+          authState={authState}
+          compact
+          title="로그인하면 지출을 저장할 수 있어요"
+          description="대시보드는 먼저 둘러보고, 개인 결제 기록은 로그인 후 저장합니다."
+        />
       ) : null}
 
       <form
         ref={formRef}
         className="grid gap-4"
         onSubmit={(event) => {
-          if (isDemo) {
+          if (!canMutate) {
             event.preventDefault();
             return;
           }
@@ -125,7 +134,7 @@ export function PaymentForm({
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="grid gap-2">
             <Label>게임</Label>
-            <Select value={userGameId} onValueChange={setUserGameId} disabled={isDemo}>
+            <Select value={userGameId} onValueChange={setUserGameId} disabled={!canMutate}>
               <SelectTrigger className="w-full rounded-md">
                 <SelectValue placeholder="게임 선택" />
               </SelectTrigger>
@@ -140,7 +149,11 @@ export function PaymentForm({
           </div>
           <div className="grid gap-2">
             <Label>유형</Label>
-            <Select value={type} onValueChange={(value) => setType(value as PaymentType)}>
+            <Select
+              value={type}
+              onValueChange={(value) => setType(value as PaymentType)}
+              disabled={!canMutate}
+            >
               <SelectTrigger className="w-full rounded-md">
                 <SelectValue />
               </SelectTrigger>
@@ -168,7 +181,7 @@ export function PaymentForm({
               onChange={(event) => setAmount(event.target.value.replace(/[^0-9]/g, ""))}
               className="metric-tabular pl-9"
               placeholder="33000"
-              disabled={isDemo}
+              disabled={!canMutate}
               required
             />
           </div>
@@ -179,7 +192,7 @@ export function PaymentForm({
                 type="button"
                 variant="secondary"
                 size="sm"
-                disabled={isDemo}
+                disabled={!canMutate}
                 onClick={() => setAmount(String(quickAmount))}
               >
                 {quickAmount.toLocaleString("ko-KR")}
@@ -196,11 +209,11 @@ export function PaymentForm({
             value={memo}
             onChange={(event) => setMemo(event.target.value)}
             placeholder="예: 픽업 10연차 전 충전, 월간 패스"
-            disabled={isDemo}
+            disabled={!canMutate}
           />
         </div>
 
-        <Button type="submit" className="w-full" disabled={isDemo || isPending}>
+        <Button type="submit" className="w-full" disabled={!canMutate || isPending}>
           <Plus className="h-4 w-4" />
           지출 기록
         </Button>
