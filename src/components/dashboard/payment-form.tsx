@@ -1,16 +1,10 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition } from "react";
 import { AlertTriangle, Coins, Plus } from "lucide-react";
+import { useMemo, useRef, useState, useTransition } from "react";
 
 import { createPayment } from "@/app/actions";
-import {
-  formatKrw,
-  getSessionWarning,
-  PAYMENT_TYPE_LABELS,
-} from "@/lib/domain/calculations";
-import type { UserGame } from "@/lib/domain/dashboard";
-import type { PaymentType } from "@/types/database";
+import { AuthCta } from "@/components/auth/auth-cta";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -33,7 +27,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { AuthCta } from "@/components/auth/auth-cta";
+import {
+  formatKrw,
+  getSessionWarning,
+  PAYMENT_TYPE_LABELS,
+} from "@/lib/domain/calculations";
+import type { UserGame } from "@/lib/domain/dashboard";
+import type { PaymentType } from "@/types/database";
 
 const QUICK_AMOUNTS = [1100, 3300, 11000, 33000];
 const PAYMENT_TYPES: PaymentType[] = ["gacha", "pass", "coin", "event", "other"];
@@ -92,7 +92,7 @@ export function PaymentForm({
         <AlertTriangle className="h-4 w-4" />
         <AlertTitle>먼저 게임을 추가해 주세요</AlertTitle>
         <AlertDescription>
-          설정에서 추적할 게임을 추가하면 지출 기록을 남길 수 있습니다.
+          설정에서 추적할 게임을 추가하면 지출 기록을 연결할 수 있습니다.
         </AlertDescription>
       </Alert>
     );
@@ -208,7 +208,7 @@ export function PaymentForm({
             name="memo"
             value={memo}
             onChange={(event) => setMemo(event.target.value)}
-            placeholder="예: 픽업 10연차 전 충전, 월간 패스"
+            placeholder="예: 픽업 10연차, 월간 패스"
             disabled={!canMutate}
           />
         </div>
@@ -222,7 +222,7 @@ export function PaymentForm({
       <AlertDialog open={isDialogOpen} onOpenChange={setDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>오늘 이미 {formatKrw(todaySpent)} 썼어요.</AlertDialogTitle>
+            <AlertDialogTitle>오늘 이미 {formatKrw(todaySpent)} 썼어요</AlertDialogTitle>
             <AlertDialogDescription>
               이 기록을 추가하면 오늘 합계는 {formatKrw(warning.totalAfter)}입니다.
               잠깐 멈추고 실제로 필요한 결제인지 확인해 주세요.

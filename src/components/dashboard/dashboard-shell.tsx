@@ -66,7 +66,7 @@ export function DashboardShell({
         <div>
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Dashboard</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            이번 달 예산, 피티, 뽑기 기록을 한 화면에서 확인합니다.
+            이번 달 예산, pity, 뽑기 기록을 한 화면에서 확인합니다.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -130,7 +130,7 @@ export function DashboardShell({
           <StatBlock
             label="월말 예상"
             value={formatKrw(pace.projected)}
-            delta={`오늘 기준 페이스 ${formatKrw(pace.expectedSpend)}`}
+            delta={`오늘 기준 예상치 ${formatKrw(pace.expectedSpend)}`}
             tone={pace.projected > budgetAmount ? "danger" : "safe"}
           />
           <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
@@ -140,7 +140,7 @@ export function DashboardShell({
         </DesignCard>
         <DesignCard bodyClassName="p-4">
           <StatBlock
-            label="오늘 기록된 지출"
+            label="오늘 기록한 지출"
             value={formatKrw(todaySpent)}
             delta={`${formatKrw(data.profile.session_warning_amount)} 이상이면 확인`}
             tone={todaySpent >= data.profile.session_warning_amount ? "warn" : "default"}
@@ -172,7 +172,9 @@ export function DashboardShell({
               ))}
             </div>
             {data.userBanners.length === 0 ? (
-              <EmptyState>아직 추적 중인 배너가 없습니다. 배너를 추가하면 피티와 확률을 볼 수 있어요.</EmptyState>
+              <EmptyState>
+                아직 추적 중인 배너가 없습니다. 배너를 추가하면 pity와 확률을 볼 수 있어요.
+              </EmptyState>
             ) : null}
           </DesignCard>
 
@@ -193,7 +195,7 @@ export function DashboardShell({
         </div>
 
         <aside className="space-y-4">
-          <DesignCard title="빠른 지출 기록" sub="예산 계산에 반영됩니다">
+          <DesignCard title="빠른 지출 기록" sub="예산 계산에 바로 반영됩니다">
             <PaymentForm
               userGames={data.userGames}
               todaySpent={todaySpent}
@@ -228,7 +230,7 @@ export function DashboardShell({
                 </div>
               ))}
               {data.guardrailRules.length === 0 ? (
-                <EmptyState>아직 설정된 가드레일이 없습니다.</EmptyState>
+                <EmptyState>아직 설정한 가드레일이 없습니다.</EmptyState>
               ) : null}
             </div>
           </DesignCard>
@@ -248,7 +250,7 @@ export function DashboardShell({
                       {pull.item_name ?? "결과 미입력"}
                     </div>
                     <div className="truncate text-xs text-muted-foreground">
-                      {pull.user_banners?.banners?.name ?? "배너"} · 피티 {pull.pity_before}
+                      {pull.user_banners?.banners?.name ?? "배너"} · pity {pull.pity_before}
                     </div>
                   </div>
                   <span className="font-mono text-xs text-muted-foreground tabular-nums">
@@ -257,7 +259,9 @@ export function DashboardShell({
                 </div>
               ))}
               {data.pulls.length === 0 ? (
-                <EmptyState>아직 뽑기 결과가 없습니다. Pull Log에서 첫 세션을 기록해보세요.</EmptyState>
+                <EmptyState>
+                  아직 뽑기 결과가 없습니다. Pull Log에서 첫 세션을 기록해 보세요.
+                </EmptyState>
               ) : null}
             </div>
           </DesignCard>
@@ -286,6 +290,7 @@ function TrackedBannerCard({ userBanner }: { userBanner: UserBanner }) {
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <h3 className="truncate text-sm font-semibold">{banner.name}</h3>
+            {!banner.is_public ? <ToneBadge tone="info">내 배너</ToneBadge> : null}
             <ToneBadge tone={remaining <= 10 ? "danger" : "safe"}>
               {remaining}회 남음
             </ToneBadge>
@@ -300,7 +305,7 @@ function TrackedBannerCard({ userBanner }: { userBanner: UserBanner }) {
       </div>
       <div className="mt-4 space-y-2">
         <div className="flex justify-between text-xs text-muted-foreground">
-          <span>피티 {userBanner.current_pity}/{banner.hard_pity}</span>
+          <span>pity {userBanner.current_pity}/{banner.hard_pity}</span>
           <span>{userBanner.pulls_total} pulls</span>
         </div>
         <ProgressBar value={progress} tone={remaining <= 10 ? "danger" : "safe"} />
@@ -325,12 +330,15 @@ function SuggestedBannerCard({
           <div className="flex items-center gap-2">
             <h3 className="truncate text-sm font-semibold">{banner.name}</h3>
             <ToneBadge>{BANNER_TYPE_LABELS[banner.banner_type]}</ToneBadge>
+            {!banner.is_public ? <ToneBadge tone="info">내 배너</ToneBadge> : null}
           </div>
           <p className="mt-1 truncate text-xs text-muted-foreground">
             {banner.games.name} · {banner.featured}
           </p>
         </div>
-        <ToneBadge tone={daysLeft <= 7 ? "warn" : "info"}>{daysLeft}일</ToneBadge>
+        <ToneBadge tone={daysLeft <= 7 ? "warn" : "info"}>
+          {daysLeft > 0 ? `${daysLeft}일` : "종료"}
+        </ToneBadge>
       </div>
       <form action={trackBanner} className="mt-4">
         <input type="hidden" name="bannerId" value={banner.id} />

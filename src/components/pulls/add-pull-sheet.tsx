@@ -1,11 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import { Plus, Star } from "lucide-react";
+import { useMemo, useState } from "react";
 
 import { createPullSession } from "@/app/actions";
-import { formatKrw } from "@/lib/domain/calculations";
-import type { UserBanner } from "@/lib/domain/dashboard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +15,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { formatKrw } from "@/lib/domain/calculations";
+import type { UserBanner } from "@/lib/domain/dashboard";
 
 export function AddPullSheet({
   userBanners,
@@ -53,7 +53,7 @@ export function AddPullSheet({
         <SheetHeader>
           <SheetTitle>뽑기 세션 추가</SheetTitle>
           <SheetDescription>
-            단일 뽑기나 10연차를 기록하면 배너 피티와 Pull Log가 함께 갱신됩니다.
+            단일 뽑기나 10연차를 기록하면 배너 pity와 Pull Log가 함께 갱신됩니다.
           </SheetDescription>
         </SheetHeader>
 
@@ -144,7 +144,7 @@ export function AddPullSheet({
           <div className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
             {selected ? (
               <>
-                {selected.banners.name} 피티가{" "}
+                {selected.banners.name} pity가{" "}
                 <span className="font-mono text-foreground">
                   {selected.current_pity} → {rarity >= 5 ? 0 : predictedPity}
                 </span>
@@ -161,7 +161,7 @@ export function AddPullSheet({
 
           <div className="grid gap-2">
             <Label htmlFor="memo">메모</Label>
-            <Input id="memo" name="memo" placeholder="예: 소프트 피티 진입 전 10연차" disabled={isDemo} />
+            <Input id="memo" name="memo" placeholder="예: 스택 확인, pity 진입 전 10연차" disabled={isDemo} />
           </div>
 
           <Button type="submit" disabled={isDemo || !userBannerId}>

@@ -64,9 +64,10 @@ export function BannerDetailPage({
         <div>
           <div className="mb-2 flex flex-wrap gap-2">
             <ToneBadge>{BANNER_TYPE_LABELS[banner.banner_type]}</ToneBadge>
+            {!banner.is_public ? <ToneBadge tone="gold">내 배너</ToneBadge> : null}
             <ToneBadge tone={daysLeft <= 7 ? "warn" : "info"}>
               <CalendarClock className="size-3" />
-              {daysLeft}일 남음
+              {daysLeft > 0 ? `${daysLeft}일 남음` : "종료됨"}
             </ToneBadge>
             <ToneBadge tone={userBanner ? "safe" : "default"}>
               {userBanner ? "추적 중" : "미추적"}
@@ -108,7 +109,7 @@ export function BannerDetailPage({
             </p>
           </div>
           <div className="mt-4 grid grid-cols-2 gap-4">
-            <StatBlock label="현재 피티" value={`${pity}/${banner.hard_pity}`} />
+            <StatBlock label="현재 pity" value={`${pity}/${banner.hard_pity}`} />
             <StatBlock label="남은 횟수" value={`${remaining}회`} tone={remaining <= 10 ? "danger" : "safe"} />
             <StatBlock label="다음 5성 확률" value={formatPercent(nextChance)} tone="gold" />
             <StatBlock label="천장 예상 비용" value={formatKrw(estimatedCost)} />
@@ -141,7 +142,7 @@ export function BannerDetailPage({
                   <div className="truncate text-sm font-medium">
                     {pull.item_name ?? "결과 미입력"}
                   </div>
-                  <div className="text-xs text-muted-foreground">피티 {pull.pity_before}</div>
+                  <div className="text-xs text-muted-foreground">pity {pull.pity_before}</div>
                 </div>
                 <span className="font-mono text-xs text-muted-foreground">
                   {formatKrw(pull.cost)}
@@ -154,7 +155,7 @@ export function BannerDetailPage({
           </div>
         </DesignCard>
 
-        <DesignCard title="지출 영향" sub="결제 기록과 뽑기 비용은 분리됩니다">
+        <DesignCard title="지출 영향" sub="결제 기록과 뽑기 비용은 분리합니다">
           <div className="grid gap-4">
             <StatBlock
               label="이 배너 기록 비용"
@@ -166,7 +167,7 @@ export function BannerDetailPage({
               tone={remaining <= 10 ? "warn" : "default"}
             />
             <p className="text-sm leading-6 text-muted-foreground">
-              Pull Log의 비용은 세션 단위 참고값입니다. 실제 예산 초과 판단은 지출 기록의 결제 금액을 기준으로 합니다.
+              Pull Log 비용은 세션 단위 참고값입니다. 실제 예산 초과 판단은 결제 기록 금액을 기준으로 합니다.
             </p>
           </div>
         </DesignCard>
@@ -185,10 +186,11 @@ function ProbabilityCurve({
   const width = 720;
   const height = 260;
   const padding = 28;
+  const denominator = Math.max(banner.hard_pity - 1, 1);
   const points = Array.from({ length: banner.hard_pity }, (_, index) => index + 1);
   const path = points
     .map((pity, index) => {
-      const x = padding + ((pity - 1) / (banner.hard_pity - 1)) * (width - padding * 2);
+      const x = padding + ((pity - 1) / denominator) * (width - padding * 2);
       const chance = probAt(pity, {
         baseRate: banner.base_rate,
         softPity: banner.soft_pity,
@@ -199,11 +201,11 @@ function ProbabilityCurve({
     })
     .join(" ");
   const cursorX =
-    padding + (Math.min(currentPity, banner.hard_pity - 1) / (banner.hard_pity - 1)) * (width - padding * 2);
+    padding + (Math.min(currentPity, banner.hard_pity - 1) / denominator) * (width - padding * 2);
 
   return (
     <div className="overflow-hidden rounded-lg border bg-muted/20 p-3">
-      <svg viewBox={`0 0 ${width} ${height}`} className="h-[260px] w-full" role="img">
+      <svg viewBox={`0 0 ${width} ${height}`} className="h-[260px] w-full" role="img" aria-label="배너 확률 곡선">
         <g stroke="#E7E5E0" strokeWidth="1">
           {[0.25, 0.5, 0.75, 1].map((line) => (
             <line
@@ -217,8 +219,8 @@ function ProbabilityCurve({
         </g>
         {banner.soft_pity ? (
           <line
-            x1={padding + ((banner.soft_pity - 1) / (banner.hard_pity - 1)) * (width - padding * 2)}
-            x2={padding + ((banner.soft_pity - 1) / (banner.hard_pity - 1)) * (width - padding * 2)}
+            x1={padding + ((banner.soft_pity - 1) / denominator) * (width - padding * 2)}
+            x2={padding + ((banner.soft_pity - 1) / denominator) * (width - padding * 2)}
             y1={padding}
             y2={height - padding}
             stroke="#B5751E"
@@ -227,11 +229,23 @@ function ProbabilityCurve({
         ) : null}
         <path d={path} fill="none" stroke="#1B8A6B" strokeWidth="3" strokeLinecap="round" />
         <line x1={cursorX} x2={cursorX} y1={padding} y2={height - padding} stroke="#0F1115" strokeWidth="1.5" />
-        <circle cx={cursorX} cy={height - padding - probAt(currentPity, {
-          baseRate: banner.base_rate,
-          softPity: banner.soft_pity,
-          hardPity: banner.hard_pity,
-        }) * (height - padding * 2)} r="5" fill="#1B8A6B" stroke="#fff" strokeWidth="2" />
+        <circle
+          cx={cursorX}
+          cy={
+            height -
+            padding -
+            probAt(currentPity, {
+              baseRate: banner.base_rate,
+              softPity: banner.soft_pity,
+              hardPity: banner.hard_pity,
+            }) *
+              (height - padding * 2)
+          }
+          r="5"
+          fill="#1B8A6B"
+          stroke="#fff"
+          strokeWidth="2"
+        />
       </svg>
       <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
         <span>soft pity {banner.soft_pity ?? "-"}</span>

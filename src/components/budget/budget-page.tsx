@@ -1,15 +1,5 @@
 import { upsertGuardrailRule, toggleGuardrailRule } from "@/app/actions";
 import {
-  formatKrw,
-  getBudgetPace,
-  getBudgetWarningLevel,
-  getMonthlySpend,
-  GUARDRAIL_RULE_LABELS,
-} from "@/lib/domain/calculations";
-import type { DashboardData, GuardrailRule } from "@/lib/domain/dashboard";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
   DesignCard,
   EmptyState,
   ProgressBar,
@@ -17,6 +7,16 @@ import {
   ToneBadge,
 } from "@/components/app/design-system";
 import { BudgetForm } from "@/components/dashboard/quick-forms";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  formatKrw,
+  getBudgetPace,
+  getBudgetWarningLevel,
+  getMonthlySpend,
+  GUARDRAIL_RULE_LABELS,
+} from "@/lib/domain/calculations";
+import type { DashboardData, GuardrailRule } from "@/lib/domain/dashboard";
 
 export function BudgetPage({ data }: { data: DashboardData }) {
   const monthlySpend = getMonthlySpend(data.payments);
@@ -40,7 +40,7 @@ export function BudgetPage({ data }: { data: DashboardData }) {
             Budget & Guardrails
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            월 예산과 멈춤 규칙을 숫자로 관리합니다. 판단을 대신하지 않고, 신호만 분명하게 보여줍니다.
+            월 예산과 멈춤 규칙을 숫자로 관리합니다. 판단은 대신하지 않고 신호만 분명하게 보여줍니다.
           </p>
         </div>
         <ToneBadge tone={warning.level === "over" ? "danger" : "safe"}>
@@ -130,7 +130,7 @@ export function BudgetPage({ data }: { data: DashboardData }) {
           <Input name="name" placeholder="규칙 이름" disabled={data.isDemo} required />
           <Input name="thresholdAmount" type="number" min={0} placeholder="금액" disabled={data.isDemo} />
           <Input name="thresholdPercent" type="number" min={1} max={200} placeholder="퍼센트" disabled={data.isDemo} />
-          <Input name="cooldownDays" type="number" min={1} max={30} placeholder="쉬는 날" disabled={data.isDemo} />
+          <Input name="cooldownDays" type="number" min={1} max={30} placeholder="쉬는 일수" disabled={data.isDemo} />
           <input type="hidden" name="enabled" value="true" />
           <Button type="submit" disabled={data.isDemo}>
             추가

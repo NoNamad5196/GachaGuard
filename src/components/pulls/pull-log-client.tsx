@@ -1,13 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import { Edit3, Search, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
 
 import { deletePull, updatePullResult } from "@/app/actions";
-import { formatKrw } from "@/lib/domain/calculations";
-import type { DashboardData, PullRecord } from "@/lib/domain/dashboard";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   DesignCard,
   EmptyState,
@@ -15,6 +11,10 @@ import {
   ToneBadge,
 } from "@/components/app/design-system";
 import { AddPullSheet } from "@/components/pulls/add-pull-sheet";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { formatKrw } from "@/lib/domain/calculations";
+import type { DashboardData, PullRecord } from "@/lib/domain/dashboard";
 
 export function PullLogClient({ data }: { data: DashboardData }) {
   const [game, setGame] = useState("all");
@@ -112,7 +112,7 @@ export function PullLogClient({ data }: { data: DashboardData }) {
                     <th className="px-4 py-3 font-medium">게임</th>
                     <th className="px-4 py-3 font-medium">배너</th>
                     <th className="px-4 py-3 font-medium">결과</th>
-                    <th className="px-4 py-3 text-right font-medium">피티</th>
+                    <th className="px-4 py-3 text-right font-medium">pity</th>
                     <th className="px-4 py-3 text-right font-medium">비용</th>
                     <th className="px-4 py-3 text-right font-medium">관리</th>
                   </tr>

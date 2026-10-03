@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(18);
+select plan(21);
 
 insert into auth.users (id, email)
 values
@@ -42,7 +42,7 @@ values (
   0.008,
   0.5
 )
-on conflict (game_id, name, ends_at) do nothing;
+on conflict (game_id, name, ends_at) where is_public do nothing;
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '11111111-1111-4111-8111-111111111111', true);
@@ -147,12 +147,46 @@ values (
   80
 );
 
+insert into public.banners (
+  id,
+  game_id,
+  created_by,
+  is_public,
+  source,
+  name,
+  banner_type,
+  featured,
+  starts_at,
+  ends_at,
+  soft_pity,
+  hard_pity,
+  base_rate,
+  rate_up
+)
+values (
+  'ffffffff-ffff-4fff-8fff-ffffffffffff',
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  '11111111-1111-4111-8111-111111111111',
+  false,
+  'user',
+  'Private RLS Test Banner',
+  'character',
+  'Private Featured',
+  now(),
+  now() + interval '14 days',
+  65,
+  80,
+  0.008,
+  0.5
+);
+
 select is((select count(*)::int from public.user_games), 1, 'owner can read own user_games');
 select is((select count(*)::int from public.payments), 2, 'owner can read own payments');
 select is((select count(*)::int from public.user_banners), 1, 'owner can read own user_banners');
 select is((select count(*)::int from public.pull_sessions), 1, 'owner can read own pull_sessions');
 select is((select count(*)::int from public.pulls), 1, 'owner can read own pulls');
 select is((select count(*)::int from public.guardrail_rules), 1, 'owner can read own guardrail_rules');
+select is((select count(*)::int from public.banners), 2, 'owner can read public and own private banners');
 select throws_ok(
   $$insert into public.payments (user_id, user_game_id, amount, type, source, import_fingerprint)
     values ('11111111-1111-4111-8111-111111111111', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 33000, 'coin', 'google_play', 'rls-import-owner')$$,
@@ -169,6 +203,7 @@ select is((select count(*)::int from public.user_banners), 0, 'other user cannot
 select is((select count(*)::int from public.pull_sessions), 0, 'other user cannot read pull_sessions');
 select is((select count(*)::int from public.pulls), 0, 'other user cannot read pulls');
 select is((select count(*)::int from public.guardrail_rules), 0, 'other user cannot read guardrail_rules');
+select is((select count(*)::int from public.banners), 1, 'other user only reads public banners');
 select throws_ok(
   $$insert into public.payments (user_id, user_game_id, amount, type)
     values ('22222222-2222-4222-8222-222222222222', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 11000, 'gacha')$$,
@@ -189,6 +224,13 @@ select throws_ok(
   '42501',
   null,
   'other user cannot track another user_game banner'
+);
+select throws_ok(
+  $$insert into public.banners (game_id, created_by, is_public, name, banner_type, featured, ends_at, hard_pity)
+    values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '11111111-1111-4111-8111-111111111111', false, 'Blocked Private Banner', 'character', 'Blocked Featured', now() + interval '7 days', 80)$$,
+  '42501',
+  null,
+  'other user cannot create a private banner for another owner'
 );
 select is((select count(*)::int from public.games), 1, 'games remain publicly readable');
 select is((select count(*)::int from public.banners), 1, 'banners remain publicly readable');

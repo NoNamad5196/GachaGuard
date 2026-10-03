@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarClock, ChevronRight } from "lucide-react";
+import { CalendarClock, ChevronRight, Plus } from "lucide-react";
 
 import { trackBanner } from "@/app/actions";
 import {
@@ -24,6 +24,7 @@ import {
 
 export function BannersPage({ data }: { data: DashboardData }) {
   const trackedByBanner = new Map(data.userBanners.map((item) => [item.banner_id, item]));
+  const customCount = data.banners.filter((banner) => !banner.is_public).length;
 
   return (
     <div className="space-y-5" data-screen-label="Banners">
@@ -31,10 +32,24 @@ export function BannersPage({ data }: { data: DashboardData }) {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Banners</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            활성 배너를 추적하고, 천장까지 남은 횟수와 비용을 비교합니다.
+            활성 배너를 추적하고, 천장까지 남은 횟수와 예상 비용을 비교합니다.
           </p>
         </div>
-        <ToneBadge tone="info">{data.banners.length}개 활성 배너</ToneBadge>
+        <div className="flex flex-wrap gap-2">
+          <ToneBadge tone="info">{data.banners.length}개 활성 배너</ToneBadge>
+          {customCount > 0 ? <ToneBadge>{customCount}개 직접 등록</ToneBadge> : null}
+          {data.isDemo ? (
+            <Button size="sm" disabled>
+              <Plus className="size-4" /> 직접 등록
+            </Button>
+          ) : (
+            <Button asChild size="sm">
+              <Link href="/banners/new">
+                <Plus className="size-4" /> 직접 등록
+              </Link>
+            </Button>
+          )}
+        </div>
       </section>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -49,7 +64,9 @@ export function BannersPage({ data }: { data: DashboardData }) {
       </div>
 
       {data.banners.length === 0 ? (
-        <EmptyState>등록된 활성 배너가 없습니다. seed나 관리자 데이터로 배너를 추가해 주세요.</EmptyState>
+        <EmptyState>
+          등록된 활성 배너가 없습니다. 직접 등록하거나 마스터 데이터에 배너를 추가해 주세요.
+        </EmptyState>
       ) : null}
     </div>
   );
@@ -82,7 +99,10 @@ function BannerCard({
     >
       <div className="rounded-lg border bg-[var(--surface-2)] p-4">
         <div className="flex items-center justify-between gap-3">
-          <ToneBadge>{BANNER_TYPE_LABELS[banner.banner_type]}</ToneBadge>
+          <div className="flex flex-wrap gap-2">
+            <ToneBadge>{BANNER_TYPE_LABELS[banner.banner_type]}</ToneBadge>
+            {!banner.is_public ? <ToneBadge tone="gold">내 배너</ToneBadge> : null}
+          </div>
           <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
             <CalendarClock className="size-3" />
             {daysLeft > 0 ? `${daysLeft}일 남음` : "종료 임박"}
@@ -112,7 +132,7 @@ function BannerCard({
 
         <div className="mt-4 space-y-2">
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>피티 {pity}/{banner.hard_pity}</span>
+            <span>pity {pity}/{banner.hard_pity}</span>
             <span>{remaining}회 남음</span>
           </div>
           <ProgressBar value={progress} tone={remaining <= 10 ? "danger" : "safe"} />

@@ -12,12 +12,34 @@ const formBoolean = z.preprocess((value) => {
   return undefined;
 }, z.boolean());
 
+const emptyToUndefined = (value: unknown) =>
+  value === undefined || value === null || value === "" ? undefined : value;
+
+const optionalInteger = z.preprocess(
+  emptyToUndefined,
+  z.coerce.number().int().optional(),
+);
+
+const optionalNumber = z.preprocess(
+  emptyToUndefined,
+  z.coerce.number().optional(),
+);
+
+const dateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+
 export const paymentTypeSchema = z.enum([
   "gacha",
   "pass",
   "coin",
   "event",
   "other",
+]);
+
+export const bannerTypeSchema = z.enum([
+  "character",
+  "weapon",
+  "standard",
+  "event",
 ]);
 
 export const guardrailRuleKindSchema = z.enum([
@@ -93,6 +115,20 @@ export const trackBannerSchema = z.object({
   bannerId: z.string().uuid(),
 });
 
+export const customBannerSchema = z.object({
+  gameId: z.string().uuid(),
+  name: z.string().trim().min(1).max(160),
+  bannerType: bannerTypeSchema.default("character"),
+  featured: z.string().trim().min(1).max(240),
+  startsAtDate: dateOnly,
+  endsAtDate: dateOnly,
+  softPity: optionalInteger.pipe(z.number().int().min(0).optional()),
+  hardPity: optionalInteger.pipe(z.number().int().positive().optional()),
+  baseRate: optionalNumber.pipe(z.number().positive().max(1).optional()),
+  rateUp: optionalNumber.pipe(z.number().min(0).max(1).optional()),
+  sourceUrl: z.string().trim().url().max(500).optional(),
+});
+
 export const pullSessionSchema = z.object({
   userBannerId: z.string().uuid(),
   pullsCount: z.coerce.number().int().min(1).max(100),
@@ -115,9 +151,9 @@ export const guardrailRuleSchema = z.object({
   id: z.string().uuid().optional(),
   kind: guardrailRuleKindSchema,
   name: z.string().trim().min(1).max(120),
-  thresholdAmount: z.coerce.number().int().min(0).optional(),
-  thresholdPercent: z.coerce.number().int().min(1).max(200).optional(),
-  cooldownDays: z.coerce.number().int().min(1).max(30).optional(),
+  thresholdAmount: optionalInteger.pipe(z.number().int().min(0).optional()),
+  thresholdPercent: optionalInteger.pipe(z.number().int().min(1).max(200).optional()),
+  cooldownDays: optionalInteger.pipe(z.number().int().min(1).max(30).optional()),
   enabled: formBoolean.default(true),
 });
 

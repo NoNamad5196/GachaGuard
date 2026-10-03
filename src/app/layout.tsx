@@ -6,7 +6,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "GachaGuard",
-  description: "가챠 게임 지출, 피티, 배너 기록을 관리하는 개인 가드레일",
+  description: "가챠 게임 지출, pity, 배너 기록을 관리하는 개인 가드레일.",
   manifest: "/manifest.webmanifest",
   applicationName: "GachaGuard",
   icons: {

@@ -61,6 +61,15 @@ The Google payment importer extends `payments` with source metadata:
 
 Manual entries keep `source = 'manual'`. Imported rows use `import_fingerprint` for per-user deduplication.
 
+The custom banner migration keeps `banners` as the shared master list while allowing private user-created rows:
+
+- `banners.created_by`
+- `banners.is_public`
+- `banners.source`
+- `banners.source_url`
+
+Public banners remain readable to everyone. Private banners are readable and mutable only by the user in `created_by`, and users can track both public and private banners through `user_banners`.
+
 ### Google Payment Import
 
 `/imports/google` accepts Google Takeout ZIP files plus extracted JSON/CSV files. Parsing happens in the browser; the raw file is not uploaded or stored. Demo mode can preview and map rows, but saving requires a Supabase session because imported rows are written to the user-owned `payments` table.
@@ -99,6 +108,7 @@ npm.cmd run dev
    - `20260508094959_optimize_rls_and_indexes.sql`
    - `20260515124603_add_gacha_design_model.sql`
    - `20260515201046_add_google_payment_import_metadata.sql`
+   - `20260517084903_add_custom_banners.sql`
 4. Seed the master game list with `supabase/seed.sql`.
 5. Enable Email Magic Link in Supabase Auth.
 6. Add redirect URLs:
@@ -115,7 +125,7 @@ https://gachaguard.vercel.app
 
 If Vercel preview deployments need login, add a preview wildcard such as `https://*-<team-or-account-slug>.vercel.app/**` to the Supabase redirect allow-list.
 
-All public schema tables have RLS enabled. `games` and `banners` are public read master data. User-owned tables use `auth.uid()` ownership checks, and cross-table writes use ownership checks against the related user records.
+All public schema tables have RLS enabled. `games` and public `banners` are public read master data. User-owned rows use `auth.uid()` ownership checks, and private banners use `created_by = auth.uid()`.
 
 ### RLS Smoke Test
 

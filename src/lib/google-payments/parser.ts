@@ -121,6 +121,13 @@ const GAME_ALIASES: Record<string, string[]> = {
   "blue-archive": ["blue archive", "bluearchive", "블루 아카이브", "블아"],
   "genshin-impact": ["genshin", "genshin impact", "원신"],
   "wuthering-waves": ["wuthering waves", "wuwa", "명조", "명조 워더링 웨이브"],
+  "honkai-star-rail": ["honkai star rail", "star rail", "붕괴 스타레일", "스타레일"],
+  nikke: ["nikke", "승리의 여신 니케", "니케"],
+  arknights: ["arknights", "명일방주"],
+  "fate-grand-order": ["fate grand order", "fgo", "페그오"],
+  "project-sekai": ["project sekai", "프로젝트 세카이", "프세카"],
+  "uma-musume": ["uma musume", "우마무스메"],
+  "zenless-zone-zero": ["zenless zone zero", "zzz", "젠레스 존 제로"],
 };
 
 export async function parseGooglePaymentFile(
@@ -147,7 +154,8 @@ export function normalizeRawRecords(
     .filter((candidate): candidate is GoogleImportCandidate => Boolean(candidate))
     .map((candidate, index) => ({ ...candidate, id: `${candidate.importFingerprint}-${index}` }))
     .map((candidate) => {
-      const duplicate = existing.has(candidate.importFingerprint) || seen.has(candidate.importFingerprint);
+      const duplicate =
+        existing.has(candidate.importFingerprint) || seen.has(candidate.importFingerprint);
       seen.add(candidate.importFingerprint);
 
       if (candidate.status === "unsupported") {
@@ -157,7 +165,7 @@ export function normalizeRawRecords(
       if (duplicate) {
         return {
           ...candidate,
-          status: "duplicate",
+          status: "duplicate" as const,
           statusReason: "이미 가져온 결제입니다.",
         };
       }
@@ -165,8 +173,8 @@ export function normalizeRawRecords(
       if (!candidate.suggestedUserGameId) {
         return {
           ...candidate,
-          status: "needs_review",
-          statusReason: "게임 매핑을 확인해야 합니다.",
+          status: "needs_review" as const,
+          statusReason: "게임 매칭을 확인해야 합니다.",
         };
       }
 
@@ -497,7 +505,9 @@ function parseMoney(value: unknown, currencyHint?: unknown) {
 }
 
 function detectCurrency(text: string) {
-  if (KRW_SYMBOLS.some((symbol) => text.toUpperCase().includes(symbol))) {
+  const upper = text.toUpperCase();
+
+  if (KRW_SYMBOLS.some((symbol) => upper.includes(symbol.toUpperCase()))) {
     return "KRW";
   }
 
@@ -505,7 +515,7 @@ function detectCurrency(text: string) {
     return "USD";
   }
 
-  if (/\bJPY\b|¥/i.test(text)) {
+  if (/\bJPY\b|¥|円/i.test(text)) {
     return "JPY";
   }
 
@@ -537,11 +547,11 @@ function inferPaymentType(values: Array<string | null>): PaymentType {
     return "pass";
   }
 
-  if (/coin|gem|crystal|stone|jewel|원석|청휘석|수정|보석|코인/.test(text)) {
+  if (/coin|gem|crystal|stone|jewel|원석|천장석|수정|보석|코인/.test(text)) {
     return "coin";
   }
 
-  if (/event|pack|bundle|패키지|팩/.test(text)) {
+  if (/event|pack|bundle|패키지|번들/.test(text)) {
     return "event";
   }
 
@@ -678,7 +688,7 @@ function normalizeSearch(value: string) {
   return value
     .normalize("NFKC")
     .toLowerCase()
-    .replace(/[\s:：._()[\]\-–—]+/g, "");
+    .replace(/[\s:·_()[\]\-~+/]/g, "");
 }
 
 function isRecord(value: unknown): value is UnknownRecord {

@@ -15,10 +15,10 @@ import {
 import type { ReactNode } from "react";
 
 import { signOut } from "@/app/actions";
+import { Button } from "@/components/ui/button";
 import { getAuthRedirectPath } from "@/lib/auth/redirects";
 import type { DashboardData } from "@/lib/domain/dashboard";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 
 type AppRoute = "dashboard" | "banners" | "pulls" | "budget" | "settings";
 

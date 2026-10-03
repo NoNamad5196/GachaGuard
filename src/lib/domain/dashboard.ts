@@ -31,6 +31,7 @@ export interface UserGame {
 export interface BannerRecord {
   id: string;
   game_id: string;
+  created_by: string | null;
   name: string;
   banner_type: BannerType;
   featured: string;
@@ -41,6 +42,9 @@ export interface BannerRecord {
   base_rate: number;
   rate_up: number;
   is_active: boolean;
+  is_public: boolean;
+  source: string;
+  source_url: string | null;
   games: GameMaster;
 }
 

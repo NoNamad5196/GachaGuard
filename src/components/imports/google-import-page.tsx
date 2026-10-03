@@ -37,7 +37,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatKrw } from "@/lib/domain/calculations";
+import { formatKrw, PAYMENT_TYPE_LABELS } from "@/lib/domain/calculations";
 import type { DashboardData } from "@/lib/domain/dashboard";
 import {
   type GoogleImportCandidate,
@@ -46,14 +46,6 @@ import {
 import type { PaymentType } from "@/types/database";
 
 const SKIP_VALUE = "__skip__";
-
-const PAYMENT_TYPE_LABELS: Record<PaymentType, string> = {
-  gacha: "뽑기",
-  pass: "패스",
-  coin: "재화",
-  event: "이벤트",
-  other: "기타",
-};
 
 type RowState = {
   selected: boolean;
@@ -142,7 +134,9 @@ export function GoogleImportPage({
       setRowState(nextState);
 
       if (parsed.length === 0) {
-        setParseError("결제 항목을 찾지 못했습니다. Google Play/Pay 내보내기 파일인지 확인해 주세요.");
+        setParseError(
+          "결제 항목을 찾지 못했습니다. Google Play/Pay 내보내기 파일인지 확인해 주세요.",
+        );
       }
     } catch (error) {
       setCandidates([]);
@@ -154,13 +148,21 @@ export function GoogleImportPage({
   }
 
   function updateRow(id: string, partial: Partial<RowState>) {
-    setRowState((current) => ({
-      ...current,
-      [id]: {
-        ...current[id],
-        ...partial,
-      },
-    }));
+    setRowState((current) => {
+      const existing = current[id] ?? {
+        selected: false,
+        userGameId: SKIP_VALUE,
+        type: "gacha" as PaymentType,
+      };
+
+      return {
+        ...current,
+        [id]: {
+          ...existing,
+          ...partial,
+        },
+      };
+    });
   }
 
   function handleSave() {
@@ -203,7 +205,7 @@ export function GoogleImportPage({
             Google 결제 가져오기
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Google Play/Pay 결제기록을 검수한 뒤 예산 지출 기준으로 저장합니다.
+            Google Play/Pay 결제기록을 검토한 뒤 예산 지출 기준으로 저장합니다.
           </p>
         </div>
         <ToneBadge tone={data.isDemo ? "warn" : "safe"}>
@@ -239,10 +241,10 @@ export function GoogleImportPage({
                 </div>
                 <div className="min-w-0">
                   <div className="truncate text-sm font-medium">
-                    {fileName ?? "아직 선택된 파일이 없습니다"}
+                    {fileName ?? "아직 선택한 파일이 없습니다"}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    원본 파일은 브라우저에서만 파싱됩니다.
+                    원본 파일은 브라우저에서만 파싱하고 저장하지 않습니다.
                   </div>
                 </div>
               </div>
@@ -265,7 +267,7 @@ export function GoogleImportPage({
             <StatBlock label="저장 가능" value={`${stats.ready}`} delta={formatKrw(selectedTotal)} tone="safe" />
           </DesignCard>
           <DesignCard bodyClassName="p-4">
-            <StatBlock label="검수 필요" value={`${stats.review}`} delta="게임 매핑 필요" tone="warn" />
+            <StatBlock label="검토 필요" value={`${stats.review}`} delta="게임 매칭 필요" tone="warn" />
           </DesignCard>
           <DesignCard bodyClassName="p-4">
             <StatBlock
@@ -292,7 +294,7 @@ export function GoogleImportPage({
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>저장은 로그인 후 가능합니다</AlertTitle>
             <AlertDescription>
-              파일 미리보기와 매핑은 먼저 확인할 수 있고, 선택 항목 저장만 로그인 후 진행합니다.
+              파일 미리보기와 매칭은 먼저 확인할 수 있고, 선택 항목 저장만 로그인 후 진행합니다.
             </AlertDescription>
           </Alert>
         ) : null}
@@ -405,7 +407,7 @@ export function GoogleImportPage({
                           }
                           disabled={isBlocked}
                         >
-                          <SelectTrigger className="w-[120px]">
+                          <SelectTrigger className="w-[130px]">
                             <SelectValue placeholder="분류" />
                           </SelectTrigger>
                           <SelectContent>
@@ -440,7 +442,7 @@ function StatusBadge({ candidate }: { candidate: GoogleImportCandidate }) {
   }
 
   if (candidate.status === "needs_review") {
-    return <ToneBadge tone="warn">검수 필요</ToneBadge>;
+    return <ToneBadge tone="warn">검토 필요</ToneBadge>;
   }
 
   if (candidate.status === "duplicate") {

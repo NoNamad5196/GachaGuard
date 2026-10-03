@@ -5,8 +5,8 @@ const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 export const PAYMENT_TYPE_LABELS: Record<PaymentType, string> = {
   gacha: "뽑기",
   pass: "패스",
-  coin: "코인충전",
-  event: "이벤트",
+  coin: "재화 충전",
+  event: "이벤트 패키지",
   other: "기타",
 };
 

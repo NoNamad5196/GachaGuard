@@ -36,6 +36,20 @@ test("demo navigation exposes banners, pull log, budget, and settings", async ({
   await expect(page.getByText("추적 중인 게임")).toBeVisible();
 });
 
+test("demo custom banner surfaces stay read-only", async ({ page }) => {
+  await page.goto("/banners/new");
+
+  await expect(page.getByRole("heading", { name: "배너 직접 등록" })).toBeVisible();
+  await expect(page.getByLabel("배너 이름")).toBeDisabled();
+  await expect(page.getByRole("button", { name: "등록하고 추적 시작" })).toBeDisabled();
+
+  await page.goto("/banners/50000000-0000-4000-8000-000000000004");
+
+  await expect(page.getByRole("heading", { name: "바람과 먼지의 해안" })).toBeVisible();
+  await expect(page.getByText("내 배너").first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "뽑기 기록" })).toBeVisible();
+});
+
 test("demo Google payment import parses a purchase fixture", async ({ page }) => {
   await page.goto("/imports/google");
 

@@ -5,18 +5,18 @@ import {
   updatePity,
   upsertBudget,
 } from "@/app/actions";
-import type { DashboardData, UserGame } from "@/lib/domain/dashboard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import type { DashboardData, UserGame } from "@/lib/domain/dashboard";
 
 export function BudgetForm({ data }: { data: DashboardData }) {
   return (
     <form action={upsertBudget} className="grid gap-3">
       <input type="hidden" name="yearMonth" value={data.yearMonth} />
       <div className="grid gap-2">
-        <Label htmlFor="totalBudget">이번 달 총 예산</Label>
+        <Label htmlFor="totalBudget">이번 달 총예산</Label>
         <Input
           id="totalBudget"
           name="totalBudget"
@@ -82,7 +82,7 @@ export function AddGameForm({ data }: { data: DashboardData }) {
           />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="currentPity">현재 피티</Label>
+          <Label htmlFor="currentPity">현재 pity</Label>
           <Input
             id="currentPity"
             name="currentPity"
@@ -129,7 +129,7 @@ export function GachaLogInlineForm({
           defaultValue={userGame.current_pity}
           disabled={isDemo}
           className="metric-tabular"
-          aria-label={`${userGame.games.name} 현재 피티`}
+          aria-label={`${userGame.games.name} 현재 pity`}
         />
         <Button type="submit" variant="secondary" disabled={isDemo}>
           갱신

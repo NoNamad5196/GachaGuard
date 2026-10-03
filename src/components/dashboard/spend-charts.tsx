@@ -13,9 +13,9 @@ import {
   YAxis,
 } from "recharts";
 
+import { EmptyState } from "@/components/app/design-system";
 import { formatKrw } from "@/lib/domain/calculations";
 import type { PaymentRecord, UserGame } from "@/lib/domain/dashboard";
-import { EmptyState } from "@/components/app/design-system";
 
 const COLORS = ["#1B8A6B", "#B5751E", "#1F5F9C", "#9A7833", "#6E4FA3", "#B42318"];
 

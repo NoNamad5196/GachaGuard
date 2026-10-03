@@ -1,10 +1,6 @@
 import Link from "next/link";
 import { Download, Mail, Trash2, Upload } from "lucide-react";
 
-import { formatKrw } from "@/lib/domain/calculations";
-import type { DashboardData } from "@/lib/domain/dashboard";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   DesignCard,
   EmptyState,
@@ -13,6 +9,10 @@ import {
 } from "@/components/app/design-system";
 import { AuthCta } from "@/components/auth/auth-cta";
 import { AddGameForm, TemplateApplyForm } from "@/components/dashboard/quick-forms";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { formatKrw } from "@/lib/domain/calculations";
+import type { DashboardData } from "@/lib/domain/dashboard";
 
 export function SettingsPage({
   data,
@@ -49,7 +49,7 @@ export function SettingsPage({
                       <ToneBadge>{trackedBanners} banners</ToneBadge>
                     </div>
                     <div className="mt-1 text-xs text-muted-foreground">
-                      {userGame.games.developer ?? "개발사 미입력"} · 피티 {userGame.current_pity}
+                      {userGame.games.developer ?? "개발사 미입력"} · pity {userGame.current_pity}
                     </div>
                   </div>
                   <span className="font-mono text-sm text-muted-foreground">
@@ -72,17 +72,17 @@ export function SettingsPage({
           <div className="grid gap-3">
             <StatBlock label="기본 통화" value="KRW" />
             <p className="text-sm leading-6 text-muted-foreground">
-              게임별 1회 비용은 `games.base_cost` 기준으로 계산합니다. 실제 예산 판단은 결제 기록 금액을 사용합니다.
+              게임별 1회 비용은 games.base_cost 기준으로 계산합니다. 실제 예산 판단은 결제 기록 금액을 사용합니다.
             </p>
           </div>
         </DesignCard>
 
-        <DesignCard title="알림" sub="제품 내 신호부터 시작">
+        <DesignCard title="알림" sub="제품 안 신호부터 시작">
           <div className="space-y-3">
             {[
               ["예산 80% 도달", "켜짐"],
               ["하드 스톱 도달", "켜짐"],
-              ["5성 후 쿨다운", "선택"],
+              ["5일 쿨다운", "선택"],
             ].map(([label, status]) => (
               <div key={label} className="flex items-center justify-between gap-3">
                 <span className="text-sm">{label}</span>
@@ -92,7 +92,7 @@ export function SettingsPage({
           </div>
         </DesignCard>
 
-        <DesignCard title="데이터" sub="가져오기/내보내기">
+        <DesignCard title="데이터" sub="가져오기와 내보내기">
           <div className="grid gap-2">
             {!data.isAuthenticated ? (
               <AuthCta
@@ -101,7 +101,7 @@ export function SettingsPage({
                 authState={authState}
                 compact
                 title="로그인하면 설정을 저장할 수 있어요"
-                description="게임, 예산, 결제 가져오기 설정은 계정에 연결된 뒤 저장됩니다."
+                description="게임, 예산, 결제 가져오기 설정은 계정에 연결한 뒤 저장됩니다."
               />
             ) : null}
             <Button asChild variant="outline">

@@ -12,7 +12,8 @@ import { cn } from "@/lib/utils";
 const AUTH_MESSAGES: Record<string, string> = {
   sent: "메일함에서 로그인 링크를 확인해 주세요.",
   "send-error": "로그인 링크 발송에 실패했습니다. Supabase Auth 설정을 확인해 주세요.",
-  "callback-error": "인증 링크 확인에 실패했습니다. 링크가 만료되었거나 redirect URL 설정이 맞지 않을 수 있습니다.",
+  "callback-error":
+    "인증 링크 확인에 실패했습니다. 링크가 만료됐거나 redirect URL 설정이 맞지 않을 수 있습니다.",
   required: "저장하려면 먼저 로그인해 주세요.",
   "missing-email": "이메일을 입력해 주세요.",
   demo: "현재 Supabase 환경 변수가 없어 데모 모드로만 확인할 수 있습니다.",
