@@ -1,5 +1,15 @@
 import { z } from "zod";
 
+export const firestoreIdSchema = z
+  .string()
+  .trim()
+  .min(1, "식별자는 비어 있을 수 없습니다.")
+  .max(1500, "식별자는 1500자를 초과할 수 없습니다.")
+  .refine(
+    (id) => new TextEncoder().encode(id).byteLength <= 1500 && !id.includes("/") && id !== "." && id !== ".." && !/^__.*__$/.test(id),
+    { message: "유효하지 않은 Firestore 문서 식별자입니다." },
+  );
+
 const formBoolean = z.preprocess((value) => {
   if (value === "true" || value === "on" || value === true) {
     return true;
@@ -25,7 +35,7 @@ const optionalNumber = z.preprocess(
   z.coerce.number().optional(),
 );
 
-const dateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const dateOnly = z.iso.date();
 
 export const paymentTypeSchema = z.enum([
   "gacha",
@@ -55,13 +65,13 @@ const positiveKrw = z.coerce
   .positive("금액은 1원 이상이어야 합니다.");
 
 export const budgetSchema = z.object({
-  yearMonth: z.string().regex(/^\d{4}-\d{2}$/),
+  yearMonth: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
   totalBudget: z.coerce.number().int().min(0),
   warningAt: z.coerce.number().int().min(1).max(100).default(70),
 });
 
 export const userGameSchema = z.object({
-  gameId: z.string().uuid(),
+  gameId: firestoreIdSchema,
   nickname: z.string().trim().max(80).optional(),
   monthlyBudget: z.coerce.number().int().min(0).default(0),
   currentPity: z.coerce.number().int().min(0).default(0),
@@ -69,7 +79,7 @@ export const userGameSchema = z.object({
 });
 
 export const paymentSchema = z.object({
-  userGameId: z.string().uuid(),
+  userGameId: firestoreIdSchema,
   amount: positiveKrw,
   type: paymentTypeSchema,
   paidAt: z.string().datetime().optional(),
@@ -78,11 +88,11 @@ export const paymentSchema = z.object({
 });
 
 export const updatePaymentSchema = paymentSchema.partial().extend({
-  id: z.string().uuid(),
+  id: firestoreIdSchema,
 });
 
 export const googlePaymentImportRowSchema = z.object({
-  userGameId: z.string().uuid(),
+  userGameId: firestoreIdSchema,
   amount: positiveKrw,
   type: paymentTypeSchema,
   paidAt: z.string().datetime(),
@@ -99,12 +109,12 @@ export const googlePaymentImportSchema = z.object({
 });
 
 export const pitySchema = z.object({
-  userGameId: z.string().uuid(),
+  userGameId: firestoreIdSchema,
   currentPity: z.coerce.number().int().min(0),
 });
 
 export const gachaLogSchema = z.object({
-  userGameId: z.string().uuid(),
+  userGameId: firestoreIdSchema,
   pulls: z.coerce.number().int().positive(),
   result: z.string().trim().max(300).optional(),
   pityAtPull: z.coerce.number().int().min(0),
@@ -112,11 +122,11 @@ export const gachaLogSchema = z.object({
 });
 
 export const trackBannerSchema = z.object({
-  bannerId: z.string().uuid(),
+  bannerId: firestoreIdSchema,
 });
 
 export const customBannerSchema = z.object({
-  gameId: z.string().uuid(),
+  gameId: firestoreIdSchema,
   name: z.string().trim().min(1).max(160),
   bannerType: bannerTypeSchema.default("character"),
   featured: z.string().trim().min(1).max(240),
@@ -130,7 +140,7 @@ export const customBannerSchema = z.object({
 });
 
 export const pullSessionSchema = z.object({
-  userBannerId: z.string().uuid(),
+  userBannerId: firestoreIdSchema,
   pullsCount: z.coerce.number().int().min(1).max(100),
   rarity: z.coerce.number().int().min(3).max(5).default(3),
   itemName: z.string().trim().max(120).optional(),
@@ -141,14 +151,14 @@ export const pullSessionSchema = z.object({
 });
 
 export const updatePullSchema = z.object({
-  id: z.string().uuid(),
+  id: firestoreIdSchema,
   rarity: z.coerce.number().int().min(3).max(5),
   itemName: z.string().trim().max(120).optional(),
   isRateUp: formBoolean.optional(),
 });
 
 export const guardrailRuleSchema = z.object({
-  id: z.string().uuid().optional(),
+  id: firestoreIdSchema.optional(),
   kind: guardrailRuleKindSchema,
   name: z.string().trim().min(1).max(120),
   thresholdAmount: optionalInteger.pipe(z.number().int().min(0).optional()),
@@ -158,12 +168,12 @@ export const guardrailRuleSchema = z.object({
 });
 
 export const toggleGuardrailRuleSchema = z.object({
-  id: z.string().uuid(),
+  id: firestoreIdSchema,
   enabled: formBoolean,
 });
 
 export const templateSchema = z.object({
-  userGameId: z.string().uuid(),
+  userGameId: firestoreIdSchema,
   name: z.string().trim().min(1).max(120),
   amount: positiveKrw,
   type: paymentTypeSchema.default("pass"),

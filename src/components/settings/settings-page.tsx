@@ -130,7 +130,7 @@ export function SettingsPage({
         title="계정"
         sub={
           data.isAuthenticated
-            ? "Supabase 계정"
+                    ? "Google 계정"
             : data.authEnabled
               ? "비로그인 미리보기"
               : "Demo Mode"

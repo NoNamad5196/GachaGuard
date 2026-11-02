@@ -3,20 +3,20 @@ import { describe, expect, test } from "vitest";
 import { googlePaymentImportSchema } from "@/lib/domain/schemas";
 
 const validImportRow = {
-  userGameId: "10000000-0000-4000-8000-000000000001",
+  userGameId: "genshin-impact",
   amount: 33000,
-  type: "coin",
+  type: "coin" as const,
   paidAt: "2026-05-10T03:00:00.000Z",
-  source: "google_play",
+  source: "google_play" as const,
   externalOrderId: "GPA.1234-5678",
   importFingerprint: "google-test-fingerprint",
   merchant: "Google Play",
   rawDescription: "Genshin Impact Genesis Crystal Pack",
-  currency: "KRW",
+  currency: "KRW" as const,
 };
 
 describe("googlePaymentImportSchema", () => {
-  test("accepts normalized KRW import rows", () => {
+  test("accepts normalized KRW import rows with safe Firestore IDs", () => {
     expect(() => googlePaymentImportSchema.parse({ rows: [validImportRow] })).not.toThrow();
   });
 
@@ -28,9 +28,9 @@ describe("googlePaymentImportSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  test("rejects user game ids that are not UUIDs", () => {
+  test("rejects invalid firestore document IDs", () => {
     const result = googlePaymentImportSchema.safeParse({
-      rows: [{ ...validImportRow, userGameId: "not-a-user-game-id" }],
+      rows: [{ ...validImportRow, userGameId: "invalid/slash/id" }],
     });
 
     expect(result.success).toBe(false);

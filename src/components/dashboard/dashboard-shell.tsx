@@ -79,7 +79,7 @@ export function DashboardShell({
           <ToneBadge tone={data.isDemo ? "warn" : "safe"}>
             <ShieldCheck className="size-3" />
             {data.isAuthenticated
-              ? "Supabase 보호 중"
+              ? "Firebase 보호 중"
               : data.authEnabled
                 ? "로그인하면 저장 가능"
                 : "Demo Mode"}
@@ -95,7 +95,7 @@ export function DashboardShell({
           <AlertDescription>
             {data.authEnabled
               ? "로그인하면 결제, 예산, 뽑기 기록을 개인 데이터로 저장할 수 있습니다."
-              : "Supabase 환경 변수를 연결하고 마이그레이션을 적용하면 저장 기능이 활성화됩니다."}
+              : "Firebase 환경 변수를 연결하면 저장 기능이 활성화됩니다."}
           </AlertDescription>
         </Alert>
       ) : null}
