@@ -1,0 +1,155 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function owner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+    function nullableString(value) {
+      return value == null || value is string;
+    }
+    function gameKeys() {
+      return ['id', 'user_id', 'game_id', 'name', 'icon', 'intensity',
+        'last_access', 'display_order', 'created_at', 'updated_at',
+        'current_goal', 'weekly_tasks', 'weekly_tasks_done', 'quests',
+        'next_goal', 'urgency', 'party_memo', 'memo', 'estimated_minutes',
+        'parties', 'deleted_at'];
+    }
+    // Only validate changed fields on legacy updates; untouched V1 data survives.
+    function validGame(d, keys, uid, id) {
+      return (!keys.hasAny(['id']) || d.id == id)
+        && (!keys.hasAny(['user_id']) || d.user_id == uid)
+        && (!keys.hasAny(['game_id']) || (d.game_id is string && d.game_id.size() > 0))
+        && (!keys.hasAny(['name']) || (d.name is string && d.name.size() > 0 && d.name.size() <= 120))
+        && (!keys.hasAny(['icon']) || nullableString(d.icon))
+        && (!keys.hasAny(['intensity']) || d.intensity in ['main', 'sub', 'login-only', 'frozen', 'abandoned'])
+        && (!keys.hasAny(['last_access']) || nullableString(d.last_access))
+        && (!keys.hasAny(['display_order']) || d.display_order is number)
+        && (!keys.hasAny(['created_at']) || d.created_at is string)
+        && (!keys.hasAny(['updated_at']) || d.updated_at is string)
+        && (!keys.hasAny(['current_goal']) || d.current_goal in [null, 'story', 'gear-farming', 'character-leveling', 'currency-saving', 'event-only', 'rest'])
+        && (!keys.hasAny(['weekly_tasks']) || d.weekly_tasks is list)
+        && (!keys.hasAny(['weekly_tasks_done']) || d.weekly_tasks_done is list)
+        && (!keys.hasAny(['quests']) || d.quests is list)
+        && (!keys.hasAny(['next_goal']) || nullableString(d.next_goal))
+        && (!keys.hasAny(['urgency']) || d.urgency in ['high', 'medium', 'low'])
+        && (!keys.hasAny(['party_memo']) || nullableString(d.party_memo))
+        && (!keys.hasAny(['memo']) || nullableString(d.memo))
+        && (!keys.hasAny(['estimated_minutes']) || (d.estimated_minutes is number && d.estimated_minutes >= 0))
+        && (!keys.hasAny(['parties']) || d.parties is list)
+        && (!keys.hasAny(['deleted_at']) || nullableString(d.get('deleted_at', null)));
+    }
+    function characterKeys() {
+      return ['id', 'game_id', 'name', 'priority_rank', 'notes', 'created_at',
+        'element', 'current_level', 'target_level', 'completed_nodes', 'total_nodes', 'deleted_at'];
+    }
+    function validCharacter(d, keys, id) {
+      return (!keys.hasAny(['id']) || d.id == id)
+        && (!keys.hasAny(['game_id']) || (d.game_id is string && d.game_id.size() > 0))
+        && (!keys.hasAny(['name']) || (d.name is string && d.name.size() > 0))
+        && (!keys.hasAny(['priority_rank']) || d.priority_rank in ['priority1', 'priority2', 'on-hold', 'favorite', 'bad-investment', 'complete'])
+        && (!keys.hasAny(['notes']) || nullableString(d.notes))
+        && (!keys.hasAny(['created_at']) || d.created_at is string)
+        && (!keys.hasAny(['element']) || d.element is string)
+        && (!keys.hasAny(['current_level']) || (d.current_level is number && d.current_level >= 1))
+        && (!keys.hasAny(['target_level']) || (d.target_level is number && d.target_level >= 1))
+        && (!keys.hasAny(['completed_nodes']) || (d.completed_nodes is number && d.completed_nodes >= 0))
+        && (!keys.hasAny(['total_nodes']) || (d.total_nodes is number && d.total_nodes >= 1))
+        && (!keys.hasAny(['deleted_at']) || nullableString(d.get('deleted_at', null)));
+    }
+    function validProfile(p, uid) {
+      return p is map
+        && p.keys().hasAll(['user_id', 'display_name', 'timezone', 'reset_day', 'reset_hour', 'reminders'])
+        && p.keys().hasOnly(['user_id', 'display_name', 'timezone', 'reset_day', 'reset_hour', 'reminders'])
+        && p.user_id == uid
+        && p.display_name is string && p.display_name.size() > 0 && p.display_name.size() <= 40
+        && p.timezone == 'Asia/Seoul'
+        && p.reset_day is int && p.reset_day >= 0 && p.reset_day <= 6
+        && p.reset_hour is int && p.reset_hour >= 0 && p.reset_hour <= 23
+        && p.reminders is map
+        && p.reminders.keys().hasAll(['weekly', 'events', 'daily'])
+        && p.reminders.keys().hasOnly(['weekly', 'events', 'daily'])
+        && p.reminders.weekly is bool && p.reminders.events is bool && p.reminders.daily is bool;
+    }
+    match /users/{uid} {
+      allow read: if owner(uid);
+      allow create: if owner(uid) && request.resource.data.keys().hasOnly(['profile'])
+        && validProfile(request.resource.data.profile, uid);
+      allow update: if owner(uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['profile'])
+        && validProfile(request.resource.data.profile, uid);
+      // Account removal is a server workflow, not a non-recursive client delete.
+      allow delete: if false;
+
+      match /games/{id} {
+        allow read: if owner(uid);
+        allow create: if owner(uid)
+          && request.resource.data.keys().hasAll(['id', 'user_id', 'game_id', 'name'])
+          && request.resource.data.keys().hasOnly(gameKeys())
+          && validGame(request.resource.data, request.resource.data.keys(), uid, id);
+        allow update: if owner(uid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(gameKeys())
+          && request.resource.data.keys().hasAll(resource.data.keys())
+          && request.resource.data.get('game_id', null) == resource.data.get('game_id', request.resource.data.get('game_id', null))
+          && request.resource.data.get('created_at', null) == resource.data.get('created_at', request.resource.data.get('created_at', null))
+          && validGame(request.resource.data, request.resource.data.diff(resource.data).affectedKeys(), uid, id);
+        allow delete: if false;
+      }
+      match /characters/{id} {
+        allow read: if owner(uid);
+        allow create: if owner(uid)
+          && request.resource.data.keys().hasAll(['id', 'game_id', 'name'])
+          && request.resource.data.keys().hasOnly(characterKeys())
+          && validCharacter(request.resource.data, request.resource.data.keys(), id);
+        allow update: if owner(uid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(characterKeys())
+          && request.resource.data.keys().hasAll(resource.data.keys())
+          && request.resource.data.get('game_id', null) == resource.data.get('game_id', request.resource.data.get('game_id', null))
+          && validCharacter(request.resource.data, request.resource.data.diff(resource.data).affectedKeys(), id);
+        allow delete: if false;
+      }
+      match /userFranchises/{id} {
+        allow read: if owner(uid);
+        allow write: if false;
+      }
+      match /gacha/main/{kind}/{id} {
+        allow read: if owner(uid) && kind in ['settings', 'gameStates', 'budgets', 'payments',
+          'paymentTemplates', 'banners', 'userBanners', 'pullSessions', 'pulls', 'gachaLogs', 'guardrailRules'];
+        allow write: if false;
+      }
+      match /hub/main/{kind}/{id} {
+        allow read: if owner(uid) && kind in ['userEvents', 'collections', 'reminders'];
+        allow write: if false;
+      }
+      match /agentSignals/{id} {
+        allow read: if owner(uid);
+        allow write: if false;
+      }
+    }
+    match /games/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
+    match /franchises/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
+    // Only publish reviewed, sanitized events here; private drafts live in suggestions.
+    match /events/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
+    match /modules/gacha/{kind}/{id} {
+      allow read: if kind in ['gameConfigs', 'banners'];
+      allow write: if false;
+    }
+    match /modules/hub/{kind}/{id} {
+      allow read, write: if false;
+    }
+    match /identityMappings/{id} {
+      allow read, write: if false;
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
