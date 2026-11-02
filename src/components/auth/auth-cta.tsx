@@ -1,22 +1,22 @@
 "use client";
 
-import { ArrowRight, LockKeyhole, Mail } from "lucide-react";
-import { useId } from "react";
+import { AlertCircle, LockKeyhole, LogIn } from "lucide-react";
+import { useState } from "react";
+import { signInWithPopup, signInWithRedirect } from "firebase/auth";
+import { FirebaseError } from "firebase/app";
 
-import { requestMagicLink } from "@/app/actions";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { getFirebaseAuth, googleProvider } from "@/lib/firebase/client";
+import { establishSession } from "@/lib/firebase/browser-session";
+import { sanitizeNextPath } from "@/lib/auth/redirects";
 import { cn } from "@/lib/utils";
 
 const AUTH_MESSAGES: Record<string, string> = {
-  sent: "메일함에서 로그인 링크를 확인해 주세요.",
-  "send-error": "로그인 링크 발송에 실패했습니다. Supabase Auth 설정을 확인해 주세요.",
-  "callback-error":
-    "인증 링크 확인에 실패했습니다. 링크가 만료됐거나 redirect URL 설정이 맞지 않을 수 있습니다.",
   required: "저장하려면 먼저 로그인해 주세요.",
-  "missing-email": "이메일을 입력해 주세요.",
-  demo: "현재 Supabase 환경 변수가 없어 데모 모드로만 확인할 수 있습니다.",
+  demo: "현재 Firebase 환경 변수가 없어 데모 모드로만 확인할 수 있습니다.",
+  "popup-closed": "로그인이 취소되었습니다. 다시 시도해 주세요.",
+  "auth-error": "Google 로그인에 실패했습니다. 연결 상태를 확인해 주세요.",
+  "callback-error": "인증 링크 확인에 실패했습니다. Google 로그인을 다시 시도해 주세요.",
 };
 
 export function AuthCta({
@@ -24,7 +24,7 @@ export function AuthCta({
   nextPath,
   authState,
   title = "로그인하면 저장할 수 있어요",
-  description = "이메일 magic link로 로그인하면 이 화면에서 계속 이어서 작업할 수 있습니다.",
+  description = "Google 계정으로 로그인하면 이 화면에서 계속 이어서 작업할 수 있습니다.",
   className,
   compact = false,
 }: {
@@ -36,7 +36,45 @@ export function AuthCta({
   className?: string;
   compact?: boolean;
 }) {
-  const emailId = useId();
+  const [busy, setBusy] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  async function handleGoogleLogin() {
+    if (!authEnabled || busy) return;
+    setBusy(true);
+    setErrorMessage(null);
+
+    try {
+      const auth = getFirebaseAuth();
+      try {
+        const result = await signInWithPopup(auth, googleProvider);
+        await establishSession(result.user);
+        window.location.assign(sanitizeNextPath(nextPath));
+      } catch (e) {
+        const code = e instanceof FirebaseError ? e.code : null;
+        if (code === "auth/popup-blocked") {
+          sessionStorage.setItem("gachaguard_auth_next", sanitizeNextPath(nextPath));
+          await signInWithRedirect(auth, googleProvider);
+          return;
+        } else if (code === "auth/popup-closed-by-user") {
+          setErrorMessage(AUTH_MESSAGES["popup-closed"]);
+          setBusy(false);
+          return;
+        } else {
+          throw e;
+        }
+      }
+
+    } catch (error) {
+      if (!(error instanceof Error)) throw error;
+      setErrorMessage(AUTH_MESSAGES["auth-error"]);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const displayedMessage =
+    errorMessage || (authState ? AUTH_MESSAGES[authState] ?? AUTH_MESSAGES["auth-error"] : null);
 
   return (
     <div
@@ -55,42 +93,36 @@ export function AuthCta({
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
             {authEnabled
               ? description
-              : "Supabase 환경 변수를 연결하면 개인 데이터 저장이 활성화됩니다."}
+              : "Firebase 환경 변수를 연결하면 개인 데이터 저장이 활성화됩니다."}
           </p>
         </div>
       </div>
 
-      {authState ? (
-        <div className="mt-3 rounded-md border bg-card px-3 py-2 text-sm text-muted-foreground">
-          {AUTH_MESSAGES[authState] ?? AUTH_MESSAGES["send-error"]}
+      {displayedMessage ? (
+        <div role="alert" className="mt-3 flex items-center gap-2 rounded-md border bg-card px-3 py-2 text-sm text-muted-foreground">
+          <AlertCircle className="size-4 shrink-0 text-amber-500" />
+          <span>{displayedMessage}</span>
         </div>
       ) : null}
 
-      {authEnabled ? (
-        <form action={requestMagicLink} className="mt-3 grid gap-2">
-          <input type="hidden" name="next" value={nextPath} />
-          <Label htmlFor={emailId} className="sr-only">
-            이메일
-          </Label>
-          <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-            <div className="relative">
-              <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id={emailId}
-                name="email"
-                type="email"
-                placeholder="you@example.com"
-                className="pl-9"
-                required
-              />
-            </div>
-            <Button type="submit">
-              로그인 링크 받기
-              <ArrowRight className="size-4" />
-            </Button>
-          </div>
-        </form>
-      ) : null}
+      <div className="mt-3">
+        <input type="hidden" name="next" value={sanitizeNextPath(nextPath)} />
+        {authEnabled ? (
+          <Button
+            type="button"
+            onClick={handleGoogleLogin}
+            disabled={busy}
+            className="w-full sm:w-auto"
+          >
+            <LogIn className="size-4" />
+            {busy ? "로그인 중..." : "Google로 로그인"}
+          </Button>
+        ) : (
+          <Button type="button" variant="outline" disabled className="w-full sm:w-auto text-xs">
+            Demo Mode (인증 비활성)
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
