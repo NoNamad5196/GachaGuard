@@ -2,8 +2,21 @@ import { spawn, spawnSync } from "node:child_process";
 
 const port = process.env.GACHAGUARD_E2E_PORT ?? "3100";
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${port}`;
+// E2E exercises the read-only demo in its "auth enabled, signed out" state.
+// Unless the caller already provides Firebase settings, point the server at the
+// local demo-otakus emulator identity (no real project, no credentials). Without
+// a session cookie the server never contacts Firebase, so no emulator is needed.
+const hasFirebaseSettings = Object.keys(process.env).some((key) => key.includes("FIREBASE"));
+const signedOutDemoEnv = hasFirebaseSettings
+  ? {}
+  : {
+      FIREBASE_PROJECT_ID: "demo-otakus",
+      FIRESTORE_EMULATOR_HOST: "127.0.0.1:8080",
+      FIREBASE_AUTH_EMULATOR_HOST: "127.0.0.1:9099",
+    };
 const env = {
   ...process.env,
+  ...signedOutDemoEnv,
   GACHAGUARD_E2E_PORT: port,
   PLAYWRIGHT_BASE_URL: baseURL,
 };

@@ -1,181 +1,102 @@
 # GachaGuard
 
-GachaGuard is a practical dashboard for tracking gacha-game spending, monthly budgets, pity progress, and pre-payment friction prompts.
+가챠 결제·월 예산·천장(pity)을 기록하는 Next.js 16 App Router 앱입니다.
+Firebase Google Auth와 서버 `firebase-admin` Cloud Firestore를 사용하며,
+SipSungJang / OtakuHub와 동일한 Firebase 프로젝트와 UID를 공유합니다.
+Cloud Functions, Blaze, 유료 API는 사용하지 않습니다.
 
-Production: https://gachaguard.vercel.app
-Supabase project ref: `ydxccaehfkqhlqumyyup`
+## 로컬 실행
 
-## Stack
+Node 24와 Java 21을 사용합니다.
 
-- Next.js App Router, TypeScript, Tailwind CSS, shadcn/ui
-- Supabase Auth, Postgres, Row Level Security
-- Recharts, React Hook Form/Zod-ready domain validation
-- Vitest unit tests and Playwright smoke E2E
-
-## GachaGuard v1 Baseline
-
-The current baseline is a typed Next.js App Router rebuild of the Claude Design prototype. The JSX/`window.*` prototype code is not checked in, and the unrelated OtakuHub prototype was not applied.
-
-### Routes
-
-- `/dashboard` - spending, budget pace, tracked banners, quick payment entry
-- `/login` - compatibility redirect only; auth prompts render inline on the target page
-- `/banners` - active banner list, pity progress, estimated cost to hard pity
-- `/banners/[id]` - banner detail, probability curve, recent pulls
-- `/pulls` - pull log filters, add-pull sheet, inline result editing
-- `/budget` - monthly budget and guardrail rules
-- `/settings` - tracked games, account information, baseline settings
-- `/imports/google` - Google Play/Pay export preview, game mapping, and payment import
-
-### Data Model
-
-The first migration creates the original user-owned spending model:
-
-- `profiles`
-- `games`
-- `user_games`
-- `budgets`
-- `payments`
-- `gacha_logs`
-- `payment_templates`
-
-The v1 design migration adds the banner and guardrail model:
-
-- `banners`
-- `user_banners`
-- `pull_sessions`
-- `pulls`
-- `guardrail_rules`
-
-`payments` remains the source of truth for actual spending and budget calculations. `pulls` is used for pull-result history, pity progress, and banner statistics.
-
-The Google payment importer extends `payments` with source metadata:
-
-- `source`
-- `external_order_id`
-- `import_fingerprint`
-- `merchant`
-- `raw_description`
-- `currency`
-- `imported_at`
-
-Manual entries keep `source = 'manual'`. Imported rows use `import_fingerprint` for per-user deduplication.
-
-The custom banner migration keeps `banners` as the shared master list while allowing private user-created rows:
-
-- `banners.created_by`
-- `banners.is_public`
-- `banners.source`
-- `banners.source_url`
-
-Public banners remain readable to everyone. Private banners are readable and mutable only by the user in `created_by`, and users can track both public and private banners through `user_banners`.
-
-### Google Payment Import
-
-`/imports/google` accepts Google Takeout ZIP files plus extracted JSON/CSV files. Parsing happens in the browser; the raw file is not uploaded or stored. Demo mode can preview and map rows, but saving requires a Supabase session because imported rows are written to the user-owned `payments` table.
-
-Google Play Takeout `Purchase History.json` is supported in the exported array shape where each item contains `purchaseHistory.invoicePrice`, `paymentMethodTitle`, `userLanguageCode`, `userCountry`, `doc`, and `purchaseTime`. Rows without an order ID use a stable import fingerprint for per-user deduplication.
-
-Only KRW rows are saved in this pass. Foreign-currency, duplicate, refunded, canceled, or unmatched rows are surfaced for review instead of being saved automatically.
-
-### Intentional v1 Gaps
-
-These Settings actions are visible but intentionally disabled until a later product pass:
-
-- CSV export
-- Email reports
-- Full record reset
-
-## Local Setup
-
-```bash
-npm.cmd install
-copy .env.local.example .env.local
-npm.cmd run dev
+```sh
+npm ci
+npm run dev
 ```
 
-`/` opens `/dashboard` first. Without a session, `/dashboard` runs with read-only demo data so the UI can still be reviewed. Login is only shown inline when saving personal data, importing Google payments, or editing account-owned settings.
+Firebase 환경 변수가 없으면 기존 **읽기 전용 데모**로 실행됩니다.
+실제 로그인 설정은 `.env.example`을 참고해 로컬 `.env.local`에만 넣습니다.
+비로그인 방문자도 데모를 볼 수 있으며 저장은 인증이 필요합니다.
+Google 결제 파일(JSON/CSV/Takeout ZIP)은 브라우저에서 파싱하고 원본 파일을 업로드하지 않습니다.
 
-## Supabase Setup
+## 인증과 데이터 경계
 
-1. Create a dedicated Supabase project for GachaGuard.
-2. Copy `.env.local.example` to `.env.local` and fill in:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
-   - `NEXT_PUBLIC_SITE_URL`
-3. Apply migrations in filename order:
-   - `20260508043908_init_gachaguard_schema.sql`
-   - `20260508094959_optimize_rls_and_indexes.sql`
-   - `20260515124603_add_gacha_design_model.sql`
-   - `20260515201046_add_google_payment_import_metadata.sql`
-   - `20260517084903_add_custom_banners.sql`
-4. Seed the master game list with `supabase/seed.sql`.
-5. Enable Email Magic Link in Supabase Auth.
-6. Add redirect URLs:
-   - `https://gachaguard.vercel.app/auth/callback`
-   - `http://localhost:3000/auth/callback`
-   - `http://127.0.0.1:3100/auth/callback`
-   - `https://<your-vercel-production-domain>/auth/callback`
+- 브라우저는 Google popup을 시도하고 차단되면 redirect로 전환합니다.
+- 서버 세션 라우트가 ID token을 검증한 뒤 HttpOnly 세션 쿠키를 발급합니다.
+- 서버 읽기/쓰기의 UID는 검증한 세션에서만 유도합니다. Admin SDK는 rules를 우회합니다.
+- 클라이언트는 개인 가챠 데이터에 직접 쓰지 않습니다. 서버가 입력과 참조 소유권을 검사합니다.
+- 실제 결제/월 예산 계산은 `payments`만 사용합니다. pull 비용은 결제 원장에 중복 합산하지 않습니다.
+- import는 지문 hash ID와 트랜잭션으로 멱등 처리하고, 반복 결제도 결정적 ID를 사용합니다.
+- pity 변경은 tracking revision 기반 트랜잭션으로 후속 결과·집계·표시 캐시를 함께 갱신합니다.
 
-For production, set Supabase Auth Site URL to:
+권위 계약: **SipSungJang `feat/otakus-firebase:docs/otakus-firestore-contract.md`**.
+이 저장소의 `firestore.rules`는 로컬 검증용 계약 스냅샷입니다. 운영 배포는 해당 SipSungJang 브랜치의
+최신 `firestore.rules`와 `firestore.indexes.json`을 검토하여 그 저장소에서 수행합니다.
+이 작업은 어떠한 운영 rules/데이터도 배포하지 않습니다.
 
-```text
-https://gachaguard.vercel.app
+## Firebase Console / Vercel 수동 설정
+
+1. **SipSungJang과 같은 프로젝트**를 선택하고 Spark 요금제를 유지합니다.
+2. Firebase Authentication → Sign-in method → Google을 활성화하고 지원 이메일을 지정합니다.
+3. Authentication → Settings → Authorized domains에 실제 GachaGuard 운영 도메인,
+   필요한 고정 Vercel preview 도메인, 로컬 테스트용 `localhost`를 추가합니다.
+   Firebase Web app의 `authDomain`을 사용하며 redirect 로그인에는 브라우저의 제3자 저장소 제한을
+   고려해야 합니다. 임의 preview wildcard를 허용했다고 가정하지 마세요.
+4. Cloud Firestore 기본 데이터베이스를 Native/Standard 모드로 준비합니다.
+   테스트 모드 공개 규칙을 운영에 사용하지 않습니다.
+5. Project settings → Your apps에서 Web app 설정을 확인하고 Vercel Production/Preview/Development에
+   `.env.example`의 `NEXT_PUBLIC_FIREBASE_*`를 설정합니다. 프로젝트 ID는 서버 설정과 같아야 합니다.
+6. Project settings → Service accounts에서 서버용 키를 발급합니다. 키 JSON은 저장소에 넣지 않고
+   Vercel 서버 환경 변수 `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`에만
+   각각 설정합니다. private key 개행은 실제 개행 또는 `\n` 형식을 사용합니다.
+7. 운영자가 SipSungJang `feat/otakus-firebase`의 공유 rules/index를 검토·배포합니다.
+   이 저장소에서는 deploy 명령을 실행하지 않습니다. Admin 권한도 최소화하세요.
+8. 아래 이관 문서를 따라 검증된 UID/게임 매핑을 만들고 dry-run 결과를 검토합니다.
+   빈 Firestore에 데모 데이터가 자동 저장되지는 않습니다. 공유 카탈로그와 gameConfigs를 별도로 준비합니다.
+9. Vercel에서 환경 변수를 반영한 새 빌드를 수행하고 실제 도메인에서 Google 로그인/로그아웃을 수동 확인합니다.
+
+## 데이터 경로
+
+`G = users/{uid}/gacha/main`이며 네임스페이스 `gacha/main` 문서는 만들지 않습니다.
+
+| 기존 Supabase table | Firestore |
+| --- | --- |
+| profiles | users/{uid}.profile/account + G/settings/preferences |
+| games | games/{gameId} + modules/gacha/gameConfigs/{gameId} |
+| user_games | users/{uid}/games/{entryId} + G/gameStates/{entryId} |
+| budgets | G/budgets/{YYYY-MM} |
+| payments | G/payments/{paymentId} |
+| payment_templates | G/paymentTemplates/{id} |
+| banners | 공개 modules/gacha/banners/{id}, 개인 G/banners/{id} |
+| user_banners | G/userBanners/{public-or-private-bannerId} |
+| pull_sessions, pulls | G/pullSessions/{sessionId}, G/pulls/{sessionId}-{pull_number} |
+| gacha_logs, guardrail_rules | G/gachaLogs/{id}, G/guardrailRules/{id} |
+
+Agent 신호를 추가하는 경우 `users/{uid}/agentSignals/{signalId}`만 사용합니다.
+무소유 공통 Agent 토큰이나 자동 신호 발송은 구현하지 않습니다.
+기존 `supabase/` SQL과 seed는 **역사적 참고**이며 앱 런타임/설치 절차가 아닙니다.
+이관 방법과 제약은 [이관 문서](docs/firebase-migration.md)를 참고하세요.
+
+## 검증
+
+```sh
+npm ci
+npm run lint
+npm run typecheck
+npm test
+npm run test:emulator
+npm run build
+npx playwright install chromium
+npm run test:e2e
 ```
 
-If Vercel preview deployments need login, add a preview wildcard such as `https://*-<team-or-account-slug>.vercel.app/**` to the Supabase redirect allow-list.
+`test:emulator`는 `demo-otakus`의 Firestore/Auth 에뮬레이터만 시작합니다.
+실제 프로젝트 alias나 비밀키는 필요하지 않습니다. 통합 테스트는 두 에뮬레이터 환경 변수가
+없으면 거부합니다. E2E는 별도 dev 서버(`127.0.0.1:3100`)의 데모 화면을 "인증 활성·로그아웃" 상태로 검사합니다.
+Firebase 환경 변수가 없으면 `scripts/run-e2e.mjs`가 서버 전용 `demo-otakus` 에뮬레이터 식별값만 주입합니다
+(세션 쿠키가 없으므로 Firebase에 접속하지 않고 읽기 전용 데모 데이터를 보여 줍니다).
+다른 포트는 `GACHAGUARD_E2E_PORT`로 지정할 수 있습니다.
+CI는 Java 21 Temurin 및 Node 24에서 lint/typecheck/unit/emulator/build/E2E를 실행합니다.
 
-All public schema tables have RLS enabled. `games` and public `banners` are public read master data. User-owned rows use `auth.uid()` ownership checks, and private banners use `created_by = auth.uid()`.
-
-### RLS Smoke Test
-
-The RLS smoke test lives at `supabase/tests/rls_verification.sql`. The Supabase CLI is not required for the app build, but it is required to run the database smoke test locally.
-
-If `supabase` is not installed globally, use `npx`:
-
-```bash
-npx supabase@latest --help
-npx supabase@latest start
-npx supabase@latest db reset
-npx supabase@latest test db
-```
-
-The checked-in test verifies that an owner can read the new `user_banners`, `pull_sessions`, `pulls`, and `guardrail_rules` rows, while another authenticated user cannot read or insert those rows.
-
-## Vercel Setup
-
-Set these environment variables in Production, Preview, and Development:
-
-```bash
-NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-NEXT_PUBLIC_SITE_URL
-```
-
-For production, `NEXT_PUBLIC_SITE_URL` should be `https://gachaguard.vercel.app`. After the production URL is known, update both `NEXT_PUBLIC_SITE_URL` and the Supabase Auth redirect allow-list.
-
-Preview environment variables require a connected Git repository in Vercel. For CLI-only deployments, Production and Development are configured first.
-
-## Commands
-
-```bash
-npm.cmd run lint
-npm.cmd run test
-npm.cmd run build
-npm.cmd run test:e2e
-```
-
-`npm.cmd run test:e2e` starts a dedicated Next.js dev server on `127.0.0.1:3100` so it does not accidentally test another local app on port 3000. Override the port when needed:
-
-```bash
-set GACHAGUARD_E2E_PORT=3200
-npm.cmd run test:e2e
-```
-
-Playwright may need browser binaries installed with `npx.cmd playwright install` on a fresh machine.
-
-## CI
-
-GitHub Actions runs the baseline checks with `npm ci`, `npm run lint`, `npm run test`, and `npm run build`.
-
-Playwright e2e is split into a separate job because it installs browser binaries. It runs for pull requests and manual workflow dispatches, using the same `npm run test:e2e` command as local development.
+기존 설정 화면의 CSV export, email reports, 전체 초기화는 여전히 비활성입니다.
+에뮬레이터는 운영 복합 index 필요 여부와 실제 Google OAuth 도메인 정책을 완전히 검증하지 않습니다.
