@@ -1,20 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import type { SupabaseClient } from "@supabase/supabase-js";
 
-import {
-  getAuthOrigin,
-  getAuthRedirectPath,
-  sanitizeNextPath,
-} from "@/lib/auth/redirects";
-import { getMonthRange } from "@/lib/domain/calculations";
+import { getAuthRedirectPath } from "@/lib/auth/redirects";
 import {
   budgetSchema,
   customBannerSchema,
   gachaLogSchema,
+  firestoreIdSchema,
   googlePaymentImportSchema,
   guardrailRuleSchema,
   paymentSchema,
@@ -27,11 +22,27 @@ import {
   updatePullSchema,
   userGameSchema,
 } from "@/lib/domain/schemas";
-import { hasSupabaseEnv } from "@/lib/supabase/env";
-import { createClient } from "@/lib/supabase/server";
-import type { Database } from "@/types/database";
-
-type AppSupabaseClient = SupabaseClient<Database>;
+import { hasFirebaseEnv } from "@/lib/firebase/env";
+import { getSessionUser, SESSION_COOKIE_NAME } from "@/lib/firebase/session";
+import {
+  addUserGame as firestoreAddUserGame,
+  applyMonthlyTemplates as firestoreApplyMonthlyTemplates,
+  createCustomBanner as firestoreCreateCustomBanner,
+  createGachaLog as firestoreCreateGachaLog,
+  createPayment as firestoreCreatePayment,
+  createPaymentTemplate as firestoreCreatePaymentTemplate,
+  createPullSession as firestoreCreatePullSession,
+  deletePayment as firestoreDeletePayment,
+  deletePull as firestoreDeletePull,
+  importGooglePayments as firestoreImportGooglePayments,
+  toggleGuardrailRule as firestoreToggleGuardrailRule,
+  trackBanner as firestoreTrackBanner,
+  updatePayment as firestoreUpdatePayment,
+  updatePity as firestoreUpdatePity,
+  updatePullResult as firestoreUpdatePullResult,
+  upsertBudget as firestoreUpsertBudget,
+  upsertGuardrailRule as firestoreUpsertGuardrailRule,
+} from "@/lib/firestore";
 
 function normalizeFormData(formData: FormData) {
   return Object.fromEntries(
@@ -43,663 +54,16 @@ function normalizeFormData(formData: FormData) {
 }
 
 async function requireSession(nextPath = "/dashboard") {
-  if (!hasSupabaseEnv()) {
+  if (!hasFirebaseEnv()) {
     redirect(getAuthRedirectPath({ auth: "demo", next: nextPath }));
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error || !user) {
+  const user = await getSessionUser();
+  if (!user || !user.uid) {
     redirect(getAuthRedirectPath({ auth: "required", next: nextPath }));
   }
 
-  return { supabase, user };
-}
-
-export async function requestMagicLink(formData: FormData) {
-  const nextPath = sanitizeNextPath(formData.get("next"));
-
-  if (!hasSupabaseEnv()) {
-    redirect(getAuthRedirectPath({ auth: "demo", next: nextPath }));
-  }
-
-  const email = String(formData.get("email") ?? "").trim();
-  if (!email) {
-    redirect(getAuthRedirectPath({ auth: "missing-email", next: nextPath }));
-  }
-
-  const requestHeaders = await headers();
-  const origin = getAuthOrigin({
-    requestOrigin: requestHeaders.get("origin"),
-    siteUrl: process.env.NEXT_PUBLIC_SITE_URL,
-    vercelUrl: process.env.NEXT_PUBLIC_VERCEL_URL ?? process.env.VERCEL_URL,
-  });
-  const callbackUrl = new URL("/auth/callback", origin);
-  callbackUrl.searchParams.set("next", nextPath);
-
-  const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: {
-      emailRedirectTo: callbackUrl.toString(),
-    },
-  });
-
-  if (error) {
-    console.error("[auth] Magic link send failed", {
-      name: error.name,
-      message: error.message,
-      status: "status" in error ? error.status : undefined,
-    });
-    redirect(getAuthRedirectPath({ auth: "send-error", next: nextPath }));
-  }
-
-  redirect(getAuthRedirectPath({ auth: "sent", next: nextPath }));
-}
-
-export async function signOut() {
-  if (hasSupabaseEnv()) {
-    const supabase = await createClient();
-    await supabase.auth.signOut();
-  }
-
-  redirect("/dashboard");
-}
-
-export async function upsertBudget(formData: FormData) {
-  const { supabase, user } = await requireSession("/budget");
-  const input = budgetSchema.parse(normalizeFormData(formData));
-
-  const { error } = await supabase.from("budgets").upsert(
-    {
-      user_id: user.id,
-      year_month: input.yearMonth,
-      total_budget: input.totalBudget,
-      warning_at: input.warningAt,
-    },
-    { onConflict: "user_id,year_month" },
-  );
-
-  if (error) {
-    throw error;
-  }
-
-  revalidatePath("/dashboard");
-  revalidatePath("/budget");
-}
-
-export async function addUserGame(formData: FormData) {
-  const { supabase, user } = await requireSession("/settings");
-  const input = userGameSchema.parse(normalizeFormData(formData));
-
-  const { error } = await supabase.from("user_games").upsert(
-    {
-      user_id: user.id,
-      game_id: input.gameId,
-      nickname: input.nickname || null,
-      monthly_budget: input.monthlyBudget,
-      current_pity: input.currentPity,
-      warning_threshold_percent: input.warningThresholdPercent,
-      is_active: true,
-    },
-    { onConflict: "user_id,game_id" },
-  );
-
-  if (error) {
-    throw error;
-  }
-
-  revalidatePath("/dashboard");
-  revalidatePath("/settings");
-}
-
-export async function updatePity(formData: FormData) {
-  const { supabase } = await requireSession("/dashboard");
-  const input = pitySchema.parse(normalizeFormData(formData));
-
-  const { error } = await supabase
-    .from("user_games")
-    .update({ current_pity: input.currentPity })
-    .eq("id", input.userGameId);
-
-  if (error) {
-    throw error;
-  }
-
-  revalidatePath("/dashboard");
-}
-
-export async function createPayment(formData: FormData) {
-  const { supabase, user } = await requireSession("/dashboard");
-  const input = paymentSchema.parse(normalizeFormData(formData));
-
-  const { error } = await supabase.from("payments").insert({
-    user_id: user.id,
-    user_game_id: input.userGameId,
-    amount: input.amount,
-    type: input.type,
-    paid_at: input.paidAt ?? new Date().toISOString(),
-    memo: input.memo || null,
-    regret_score: input.regretScore ?? null,
-  });
-
-  if (error) {
-    throw error;
-  }
-
-  revalidatePath("/dashboard");
-  revalidatePath("/budget");
-}
-
-export async function updatePayment(formData: FormData) {
-  const { supabase } = await requireSession("/dashboard");
-  const input = updatePaymentSchema.parse(normalizeFormData(formData));
-
-  const { id, userGameId, paidAt, regretScore, ...rest } = input;
-  const { error } = await supabase
-    .from("payments")
-    .update({
-      ...rest,
-      user_game_id: userGameId,
-      paid_at: paidAt,
-      regret_score: regretScore,
-    })
-    .eq("id", id);
-
-  if (error) {
-    throw error;
-  }
-
-  revalidatePath("/dashboard");
-  revalidatePath("/budget");
-}
-
-export async function deletePayment(formData: FormData) {
-  const { supabase } = await requireSession("/dashboard");
-  const id = String(formData.get("id") ?? "");
-
-  const { error } = await supabase.from("payments").delete().eq("id", id);
-
-  if (error) {
-    throw error;
-  }
-
-  revalidatePath("/dashboard");
-  revalidatePath("/budget");
-}
-
-export async function importGooglePayments(payload: unknown) {
-  const { supabase, user } = await requireSession("/imports/google");
-  const input = googlePaymentImportSchema.parse(payload);
-  const userGameIds = Array.from(new Set(input.rows.map((row) => row.userGameId)));
-
-  const { data: ownedUserGames, error: userGamesError } = await supabase
-    .from("user_games")
-    .select("id")
-    .eq("user_id", user.id)
-    .in("id", userGameIds);
-
-  if (userGamesError) {
-    throw userGamesError;
-  }
-
-  const ownedIds = new Set((ownedUserGames ?? []).map((userGame) => userGame.id));
-  if (userGameIds.some((id) => !ownedIds.has(id))) {
-    throw new Error("선택한 게임을 확인할 수 없습니다.");
-  }
-
-  const fingerprints = Array.from(new Set(input.rows.map((row) => row.importFingerprint)));
-  const { data: existingRows, error: existingError } = await supabase
-    .from("payments")
-    .select("import_fingerprint")
-    .eq("user_id", user.id)
-    .in("import_fingerprint", fingerprints);
-
-  if (existingError) {
-    throw existingError;
-  }
-
-  const existingFingerprints = new Set(
-    (existingRows ?? [])
-      .map((row) => row.import_fingerprint)
-      .filter((fingerprint): fingerprint is string => Boolean(fingerprint)),
-  );
-  const seen = new Set<string>();
-  const rowsToInsert = input.rows.filter((row) => {
-    if (existingFingerprints.has(row.importFingerprint) || seen.has(row.importFingerprint)) {
-      return false;
-    }
-
-    seen.add(row.importFingerprint);
-    return true;
-  });
-
-  if (rowsToInsert.length > 0) {
-    const importedAt = new Date().toISOString();
-    const { error } = await supabase.from("payments").insert(
-      rowsToInsert.map((row) => ({
-        user_id: user.id,
-        user_game_id: row.userGameId,
-        amount: row.amount,
-        type: row.type,
-        paid_at: row.paidAt,
-        memo: buildGooglePaymentMemo(row),
-        regret_score: null,
-        source: row.source,
-        external_order_id: row.externalOrderId ?? null,
-        import_fingerprint: row.importFingerprint,
-        merchant: row.merchant ?? null,
-        raw_description: row.rawDescription,
-        currency: row.currency,
-        imported_at: importedAt,
-      })),
-    );
-
-    if (error) {
-      throw error;
-    }
-  }
-
-  revalidatePath("/dashboard");
-  revalidatePath("/budget");
-  revalidatePath("/settings");
-  revalidatePath("/imports/google");
-
-  return {
-    inserted: rowsToInsert.length,
-    skippedDuplicates: input.rows.length - rowsToInsert.length,
-  };
-}
-
-export async function createGachaLog(formData: FormData) {
-  const { supabase, user } = await requireSession("/dashboard");
-  const input = gachaLogSchema.parse(normalizeFormData(formData));
-
-  const { error } = await supabase.from("gacha_logs").insert({
-    user_id: user.id,
-    user_game_id: input.userGameId,
-    pulls: input.pulls,
-    result: input.result || null,
-    pity_at_pull: input.pityAtPull,
-    pulled_at: input.pulledAt ?? new Date().toISOString(),
-  });
-
-  if (error) {
-    throw error;
-  }
-
-  await supabase
-    .from("user_games")
-    .update({ current_pity: input.pityAtPull + input.pulls })
-    .eq("id", input.userGameId);
-
-  revalidatePath("/dashboard");
-}
-
-export async function createPaymentTemplate(formData: FormData) {
-  const { supabase, user } = await requireSession("/settings");
-  const input = templateSchema.parse(normalizeFormData(formData));
-
-  const { error } = await supabase.from("payment_templates").insert({
-    user_id: user.id,
-    user_game_id: input.userGameId,
-    name: input.name,
-    amount: input.amount,
-    type: input.type,
-    day_of_month: input.dayOfMonth,
-  });
-
-  if (error) {
-    throw error;
-  }
-
-  revalidatePath("/dashboard");
-  revalidatePath("/settings");
-}
-
-export async function applyMonthlyTemplates() {
-  const { supabase, user } = await requireSession("/settings");
-  const { yearMonth, year, month } = getMonthRange();
-
-  const { data: templates, error: templateError } = await supabase
-    .from("payment_templates")
-    .select("*")
-    .eq("user_id", user.id)
-    .eq("is_active", true);
-
-  if (templateError) {
-    throw templateError;
-  }
-
-  const targets = (templates ?? []).filter(
-    (template) => template.last_applied_year_month !== yearMonth,
-  );
-
-  if (targets.length === 0) {
-    revalidatePath("/dashboard");
-    return;
-  }
-
-  const { error } = await supabase.from("payments").insert(
-    targets.map((template) => ({
-      user_id: user.id,
-      user_game_id: template.user_game_id,
-      amount: template.amount,
-      type: template.type,
-      paid_at: new Date(Date.UTC(year, month - 1, template.day_of_month, -9)).toISOString(),
-      memo: `${template.name} 자동 반복`,
-    })),
-  );
-
-  if (error) {
-    throw error;
-  }
-
-  await Promise.all(
-    targets.map((template) =>
-      supabase
-        .from("payment_templates")
-        .update({ last_applied_year_month: yearMonth })
-        .eq("id", template.id),
-    ),
-  );
-
-  revalidatePath("/dashboard");
-  revalidatePath("/budget");
-}
-
-export async function createCustomBanner(formData: FormData) {
-  const { supabase, user } = await requireSession("/banners/new");
-  const input = customBannerSchema.parse(normalizeFormData(formData));
-  const startsAt = dateToKstIso(input.startsAtDate, "start");
-  const endsAt = dateToKstIso(input.endsAtDate, "end");
-
-  if (new Date(startsAt) > new Date(endsAt)) {
-    throw new Error("종료일은 시작일보다 빠를 수 없습니다.");
-  }
-
-  const { data: game, error: gameError } = await supabase
-    .from("games")
-    .select("id, soft_pity, hard_pity")
-    .eq("id", input.gameId)
-    .single();
-
-  if (gameError) {
-    throw gameError;
-  }
-
-  const { data: banner, error: bannerError } = await supabase
-    .from("banners")
-    .insert({
-      game_id: game.id,
-      created_by: user.id,
-      name: input.name,
-      banner_type: input.bannerType,
-      featured: input.featured,
-      starts_at: startsAt,
-      ends_at: endsAt,
-      soft_pity: input.softPity ?? game.soft_pity ?? null,
-      hard_pity: input.hardPity ?? game.hard_pity ?? 90,
-      base_rate: input.baseRate ?? 0.006,
-      rate_up: input.rateUp ?? 0.5,
-      is_active: true,
-      is_public: false,
-      source: "user",
-      source_url: input.sourceUrl ?? null,
-    })
-    .select("id, game_id")
-    .single();
-
-  if (bannerError) {
-    throw bannerError;
-  }
-
-  const userGame = await ensureUserGame(supabase, user.id, banner.game_id);
-
-  const { error: userBannerError } = await supabase.from("user_banners").upsert(
-    {
-      user_id: user.id,
-      user_game_id: userGame.id,
-      banner_id: banner.id,
-      current_pity: userGame.current_pity,
-      is_tracking: true,
-    },
-    { onConflict: "user_id,banner_id" },
-  );
-
-  if (userBannerError) {
-    throw userBannerError;
-  }
-
-  revalidateTrackedRoutes(banner.id);
-  redirect(`/banners/${banner.id}`);
-}
-
-export async function trackBanner(formData: FormData) {
-  const { supabase, user } = await requireSession("/banners");
-  const input = trackBannerSchema.parse(normalizeFormData(formData));
-
-  const { data: banner, error: bannerError } = await supabase
-    .from("banners")
-    .select("id, game_id")
-    .eq("id", input.bannerId)
-    .single();
-
-  if (bannerError) {
-    throw bannerError;
-  }
-
-  const userGame = await ensureUserGame(supabase, user.id, banner.game_id);
-
-  const { error } = await supabase.from("user_banners").upsert(
-    {
-      user_id: user.id,
-      user_game_id: userGame.id,
-      banner_id: banner.id,
-      current_pity: userGame.current_pity,
-      is_tracking: true,
-    },
-    { onConflict: "user_id,banner_id" },
-  );
-
-  if (error) {
-    throw error;
-  }
-
-  revalidateTrackedRoutes(input.bannerId);
-}
-
-export async function createPullSession(formData: FormData) {
-  const { supabase, user } = await requireSession("/pulls");
-  const input = pullSessionSchema.parse(normalizeFormData(formData));
-
-  const { data: userBanner, error: userBannerError } = await supabase
-    .from("user_banners")
-    .select("id, user_game_id, current_pity, pulls_total, pulls_5_star")
-    .eq("id", input.userBannerId)
-    .eq("user_id", user.id)
-    .single();
-
-  if (userBannerError) {
-    throw userBannerError;
-  }
-
-  const pulledAt = input.pulledAt ?? new Date().toISOString();
-  const totalCost = input.costPerPull * input.pullsCount;
-
-  const { data: session, error: sessionError } = await supabase
-    .from("pull_sessions")
-    .insert({
-      user_id: user.id,
-      user_banner_id: input.userBannerId,
-      pulls_count: input.pullsCount,
-      total_cost: totalCost,
-      currency: "KRW",
-      memo: input.memo || null,
-      pulled_at: pulledAt,
-    })
-    .select("id")
-    .single();
-
-  if (sessionError) {
-    throw sessionError;
-  }
-
-  const resultIndex = input.pullsCount;
-  const pullRows = Array.from({ length: input.pullsCount }, (_, index) => {
-    const pullNumber = index + 1;
-    const isResultPull = pullNumber === resultIndex;
-    const rarity = isResultPull ? input.rarity : 3;
-
-    return {
-      user_id: user.id,
-      pull_session_id: session.id,
-      user_banner_id: input.userBannerId,
-      pull_number: pullNumber,
-      pity_before: userBanner.current_pity + index,
-      rarity,
-      item_name: isResultPull
-        ? input.itemName || `${rarity}성 결과`
-        : "일반 결과",
-      cost: input.costPerPull,
-      is_rate_up: rarity === 5 ? input.isRateUp ?? null : null,
-      pulled_at: pulledAt,
-    };
-  });
-
-  const { error: pullsError } = await supabase.from("pulls").insert(pullRows);
-
-  if (pullsError) {
-    throw pullsError;
-  }
-
-  await recalculateBannerState(supabase, user.id, input.userBannerId);
-  revalidateTrackedRoutes();
-}
-
-export async function updatePullResult(formData: FormData) {
-  const { supabase, user } = await requireSession("/pulls");
-  const input = updatePullSchema.parse(normalizeFormData(formData));
-
-  const { data: pull, error: pullError } = await supabase
-    .from("pulls")
-    .select("user_banner_id")
-    .eq("id", input.id)
-    .eq("user_id", user.id)
-    .single();
-
-  if (pullError) {
-    throw pullError;
-  }
-
-  const { error } = await supabase
-    .from("pulls")
-    .update({
-      rarity: input.rarity,
-      item_name: input.itemName || null,
-      is_rate_up: input.rarity === 5 ? input.isRateUp ?? null : null,
-    })
-    .eq("id", input.id)
-    .eq("user_id", user.id);
-
-  if (error) {
-    throw error;
-  }
-
-  await recalculateBannerState(supabase, user.id, pull.user_banner_id);
-  revalidateTrackedRoutes();
-}
-
-export async function deletePull(formData: FormData) {
-  const { supabase, user } = await requireSession("/pulls");
-  const id = String(formData.get("id") ?? "");
-
-  const { data: pull, error: pullError } = await supabase
-    .from("pulls")
-    .select("user_banner_id")
-    .eq("id", id)
-    .eq("user_id", user.id)
-    .single();
-
-  if (pullError) {
-    throw pullError;
-  }
-
-  const { error } = await supabase
-    .from("pulls")
-    .delete()
-    .eq("id", id)
-    .eq("user_id", user.id);
-
-  if (error) {
-    throw error;
-  }
-
-  await recalculateBannerState(supabase, user.id, pull.user_banner_id);
-  revalidateTrackedRoutes();
-}
-
-export async function upsertGuardrailRule(formData: FormData) {
-  const { supabase, user } = await requireSession("/budget");
-  const input = guardrailRuleSchema.parse(normalizeFormData(formData));
-
-  if (input.id) {
-    const { error } = await supabase
-      .from("guardrail_rules")
-      .update({
-        kind: input.kind,
-        name: input.name,
-        threshold_amount: input.thresholdAmount ?? null,
-        threshold_percent: input.thresholdPercent ?? null,
-        cooldown_days: input.cooldownDays ?? null,
-        enabled: input.enabled,
-      })
-      .eq("id", input.id)
-      .eq("user_id", user.id);
-
-    if (error) {
-      throw error;
-    }
-  } else {
-    const { error } = await supabase.from("guardrail_rules").insert({
-      user_id: user.id,
-      kind: input.kind,
-      name: input.name,
-      threshold_amount: input.thresholdAmount ?? null,
-      threshold_percent: input.thresholdPercent ?? null,
-      cooldown_days: input.cooldownDays ?? null,
-      enabled: input.enabled,
-    });
-
-    if (error) {
-      throw error;
-    }
-  }
-
-  revalidatePath("/budget");
-  revalidatePath("/dashboard");
-}
-
-export async function toggleGuardrailRule(formData: FormData) {
-  const { supabase, user } = await requireSession("/budget");
-  const input = toggleGuardrailRuleSchema.parse(normalizeFormData(formData));
-
-  const { error } = await supabase
-    .from("guardrail_rules")
-    .update({ enabled: input.enabled })
-    .eq("id", input.id)
-    .eq("user_id", user.id);
-
-  if (error) {
-    throw error;
-  }
-
-  revalidatePath("/budget");
-  revalidatePath("/dashboard");
+  return { uid: user.uid, user };
 }
 
 function revalidateTrackedRoutes(bannerId?: string) {
@@ -713,127 +77,158 @@ function revalidateTrackedRoutes(bannerId?: string) {
   }
 }
 
-function buildGooglePaymentMemo(row: {
-  source: "google_play" | "google_pay";
-  externalOrderId?: string | null;
-  merchant?: string | null;
-  rawDescription: string;
-}) {
-  const sourceLabel = row.source === "google_play" ? "Google Play" : "Google Pay";
-  const detail = [row.merchant, row.rawDescription, row.externalOrderId]
-    .filter(Boolean)
-    .join(" · ");
-
-  return `${sourceLabel} 가져오기${detail ? ` · ${detail}` : ""}`.slice(0, 500);
+export async function signOut() {
+  const cookieStore = await cookies();
+  cookieStore.delete(SESSION_COOKIE_NAME);
+  redirect("/dashboard");
 }
 
-function dateToKstIso(date: string, boundary: "start" | "end") {
-  return `${date}T${boundary === "start" ? "00:00:00" : "23:59:59"}+09:00`;
+export async function upsertBudget(formData: FormData) {
+  const { uid } = await requireSession("/budget");
+  const input = budgetSchema.parse(normalizeFormData(formData));
+  await firestoreUpsertBudget(uid, input);
+
+  revalidatePath("/dashboard");
+  revalidatePath("/budget");
 }
 
-async function ensureUserGame(
-  supabase: AppSupabaseClient,
-  userId: string,
-  gameId: string,
-) {
-  const userGameResult = await supabase
-    .from("user_games")
-    .select("id, current_pity")
-    .eq("user_id", userId)
-    .eq("game_id", gameId)
-    .maybeSingle();
+export async function addUserGame(formData: FormData) {
+  const { uid } = await requireSession("/settings");
+  const input = userGameSchema.parse(normalizeFormData(formData));
+  await firestoreAddUserGame(uid, input);
 
-  if (userGameResult.error) {
-    throw userGameResult.error;
-  }
-
-  if (userGameResult.data) {
-    return userGameResult.data;
-  }
-
-  const { data: createdUserGame, error: createUserGameError } = await supabase
-    .from("user_games")
-    .insert({
-      user_id: userId,
-      game_id: gameId,
-      current_pity: 0,
-      monthly_budget: 0,
-      warning_threshold_percent: 70,
-      is_active: true,
-    })
-    .select("id, current_pity")
-    .single();
-
-  if (createUserGameError) {
-    throw createUserGameError;
-  }
-
-  return createdUserGame;
+  revalidatePath("/dashboard");
+  revalidatePath("/settings");
 }
 
-async function recalculateBannerState(
-  supabase: AppSupabaseClient,
-  userId: string,
-  userBannerId: string,
-) {
-  const { data: userBanner, error: userBannerError } = await supabase
-    .from("user_banners")
-    .select("id, user_game_id")
-    .eq("id", userBannerId)
-    .eq("user_id", userId)
-    .single();
+export async function updatePity(formData: FormData) {
+  const { uid } = await requireSession("/dashboard");
+  const input = pitySchema.parse(normalizeFormData(formData));
+  await firestoreUpdatePity(uid, input);
 
-  if (userBannerError) {
-    throw userBannerError;
-  }
+  revalidatePath("/dashboard");
+}
 
-  const { data: pulls, error: pullsError } = await supabase
-    .from("pulls")
-    .select("rarity")
-    .eq("user_id", userId)
-    .eq("user_banner_id", userBannerId)
-    .order("pulled_at", { ascending: true })
-    .order("pull_number", { ascending: true });
+export async function createPayment(formData: FormData) {
+  const { uid } = await requireSession("/dashboard");
+  const input = paymentSchema.parse(normalizeFormData(formData));
+  await firestoreCreatePayment(uid, input);
 
-  if (pullsError) {
-    throw pullsError;
-  }
+  revalidatePath("/dashboard");
+  revalidatePath("/budget");
+}
 
-  let currentPity = 0;
-  let fiveStarCount = 0;
+export async function updatePayment(formData: FormData) {
+  const { uid } = await requireSession("/dashboard");
+  const input = updatePaymentSchema.parse(normalizeFormData(formData));
+  await firestoreUpdatePayment(uid, input);
 
-  for (const pull of pulls ?? []) {
-    if (pull.rarity >= 5) {
-      currentPity = 0;
-      fiveStarCount += 1;
-    } else {
-      currentPity += 1;
-    }
-  }
+  revalidatePath("/dashboard");
+  revalidatePath("/budget");
+}
 
-  const pullsTotal = pulls?.length ?? 0;
+export async function deletePayment(formData: FormData) {
+  const { uid } = await requireSession("/dashboard");
+  const id = firestoreIdSchema.parse(formData.get("id"));
+  await firestoreDeletePayment(uid, id);
 
-  const { error: updateBannerError } = await supabase
-    .from("user_banners")
-    .update({
-      current_pity: currentPity,
-      pulls_total: pullsTotal,
-      pulls_5_star: fiveStarCount,
-    })
-    .eq("id", userBannerId)
-    .eq("user_id", userId);
+  revalidatePath("/dashboard");
+  revalidatePath("/budget");
+}
 
-  if (updateBannerError) {
-    throw updateBannerError;
-  }
+export async function importGooglePayments(payload: unknown) {
+  const { uid } = await requireSession("/imports/google");
+  const input = googlePaymentImportSchema.parse(payload);
+  const result = await firestoreImportGooglePayments(uid, input);
 
-  const { error: updateGameError } = await supabase
-    .from("user_games")
-    .update({ current_pity: currentPity })
-    .eq("id", userBanner.user_game_id)
-    .eq("user_id", userId);
+  revalidatePath("/dashboard");
+  revalidatePath("/budget");
+  revalidatePath("/settings");
+  revalidatePath("/imports/google");
 
-  if (updateGameError) {
-    throw updateGameError;
-  }
+  return result;
+}
+
+export async function createGachaLog(formData: FormData) {
+  const { uid } = await requireSession("/dashboard");
+  const input = gachaLogSchema.parse(normalizeFormData(formData));
+  await firestoreCreateGachaLog(uid, input);
+
+  revalidatePath("/dashboard");
+}
+
+export async function createPaymentTemplate(formData: FormData) {
+  const { uid } = await requireSession("/settings");
+  const input = templateSchema.parse(normalizeFormData(formData));
+  await firestoreCreatePaymentTemplate(uid, input);
+
+  revalidatePath("/dashboard");
+  revalidatePath("/settings");
+}
+
+export async function applyMonthlyTemplates() {
+  const { uid } = await requireSession("/settings");
+  await firestoreApplyMonthlyTemplates(uid);
+
+  revalidatePath("/dashboard");
+  revalidatePath("/budget");
+}
+
+export async function createCustomBanner(formData: FormData) {
+  const { uid } = await requireSession("/banners/new");
+  const input = customBannerSchema.parse(normalizeFormData(formData));
+  const { bannerId } = await firestoreCreateCustomBanner(uid, input);
+
+  revalidateTrackedRoutes(bannerId);
+  redirect(`/banners/${bannerId}`);
+}
+
+export async function trackBanner(formData: FormData) {
+  const { uid } = await requireSession("/banners");
+  const input = trackBannerSchema.parse(normalizeFormData(formData));
+  await firestoreTrackBanner(uid, input);
+
+  revalidateTrackedRoutes(input.bannerId);
+}
+
+export async function createPullSession(formData: FormData) {
+  const { uid } = await requireSession("/pulls");
+  const input = pullSessionSchema.parse(normalizeFormData(formData));
+  await firestoreCreatePullSession(uid, input);
+
+  revalidateTrackedRoutes();
+}
+
+export async function updatePullResult(formData: FormData) {
+  const { uid } = await requireSession("/pulls");
+  const input = updatePullSchema.parse(normalizeFormData(formData));
+  await firestoreUpdatePullResult(uid, input);
+
+  revalidateTrackedRoutes();
+}
+
+export async function deletePull(formData: FormData) {
+  const { uid } = await requireSession("/pulls");
+  const id = firestoreIdSchema.parse(formData.get("id"));
+  await firestoreDeletePull(uid, id);
+
+  revalidateTrackedRoutes();
+}
+
+export async function upsertGuardrailRule(formData: FormData) {
+  const { uid } = await requireSession("/budget");
+  const input = guardrailRuleSchema.parse(normalizeFormData(formData));
+  await firestoreUpsertGuardrailRule(uid, input);
+
+  revalidatePath("/budget");
+  revalidatePath("/dashboard");
+}
+
+export async function toggleGuardrailRule(formData: FormData) {
+  const { uid } = await requireSession("/budget");
+  const input = toggleGuardrailRuleSchema.parse(normalizeFormData(formData));
+  await firestoreToggleGuardrailRule(uid, input);
+
+  revalidatePath("/budget");
+  revalidatePath("/dashboard");
 }

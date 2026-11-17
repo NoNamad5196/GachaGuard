@@ -211,7 +211,7 @@ export function GoogleImportPage({
         <ToneBadge tone={data.isDemo ? "warn" : "safe"}>
           <ShieldCheck className="size-3" />
           {data.isAuthenticated
-            ? "Supabase 보호 중"
+                    ? "Firebase 보호 중"
             : data.authEnabled
               ? "로그인하면 저장 가능"
               : "Demo Mode"}

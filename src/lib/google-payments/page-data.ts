@@ -1,37 +1,28 @@
 import { getAppDataOrRedirect } from "@/lib/page-data";
-import { hasSupabaseEnv } from "@/lib/supabase/env";
-import { createClient } from "@/lib/supabase/server";
+import { getAdminDb } from "@/lib/firebase/admin";
+import { getSessionUser } from "@/lib/firebase/session";
 
 export async function getGoogleImportPageData() {
   const data = await getAppDataOrRedirect();
 
-  if (data.isDemo || !hasSupabaseEnv()) {
+  if (data.isDemo) {
     return { data, existingImportFingerprints: [] };
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSessionUser();
 
   if (!user) {
     return { data, existingImportFingerprints: [] };
   }
 
-  const { data: rows, error } = await supabase
-    .from("payments")
-    .select("import_fingerprint")
-    .eq("user_id", user.id)
-    .not("import_fingerprint", "is", null);
-
-  if (error) {
-    throw error;
-  }
+  // Preview only: the transaction performs authoritative dedupe for all history.
+  const rows = await getAdminDb().collection(`users/${user.uid}/gacha/main/payments`)
+    .where("import_fingerprint", "!=", null).limit(1000).get();
 
   return {
     data,
-    existingImportFingerprints: (rows ?? [])
-      .map((row) => row.import_fingerprint)
-      .filter((fingerprint): fingerprint is string => Boolean(fingerprint)),
+    existingImportFingerprints: rows.docs
+      .map((row) => row.get("import_fingerprint"))
+      .filter((fingerprint): fingerprint is string => typeof fingerprint === "string"),
   };
 }

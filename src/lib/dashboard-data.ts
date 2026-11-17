@@ -1,160 +1,219 @@
+import { Timestamp } from "firebase-admin/firestore";
 import { getMonthRange } from "@/lib/domain/calculations";
 import type {
-  BannerRecord,
   BudgetRecord,
   DashboardData,
-  GameMaster,
   GachaLogRecord,
   GuardrailRule,
-  PaymentRecord,
-  ProfileRecord,
-  PullRecord,
-  PullSessionRecord,
-  UserBanner,
-  UserGame,
 } from "@/lib/domain/dashboard";
 import { getDemoDashboardData } from "@/lib/domain/demo-data";
-import { hasSupabaseEnv } from "@/lib/supabase/env";
-import { createClient } from "@/lib/supabase/server";
+import { getAdminDb } from "@/lib/firebase/admin";
+import { hasFirebaseEnv } from "@/lib/firebase/env";
+import { getSessionUser } from "@/lib/firebase/session";
+import {
+  bannerDocSchema,
+  budgetDocSchema,
+  gachaLogDocSchema,
+  gameConfigDocSchema,
+  gameDocSchema,
+  gameStateDocSchema,
+  guardrailRuleDocSchema,
+  paymentDocSchema,
+  preferencesDocSchema,
+  pullDocSchema,
+  pullSessionDocSchema,
+  sharedUserGameDocSchema,
+  userBannerDocSchema,
+  userDocSchema,
+} from "./firestore/read-schemas";
+import {
+  projectBanners,
+  projectGameMasters,
+  projectUserBanners,
+  projectUserGames,
+} from "./firestore/read-projections";
+import {
+  projectPayments,
+  projectProfile,
+  projectPulls,
+  projectPullSessions,
+} from "./firestore/read-records";
 
-const GAME_SELECT =
-  "id, slug, name, developer, genre, soft_pity, hard_pity, base_cost, has_guarantee";
-
-const BANNER_SELECT = `*, games(${GAME_SELECT})`;
-const USER_GAME_SELECT = `*, games(${GAME_SELECT})`;
-const USER_BANNER_SELECT = `*, banners(${BANNER_SELECT}), user_games(${USER_GAME_SELECT})`;
+function assertLimit<T>(docs: T[], limit: number, entityName: string): T[] {
+  if (docs.length > limit) {
+    throw new Error(`${entityName} 조회 결과가 한도(${limit}건)를 초과했습니다.`);
+  }
+  return docs;
+}
 
 export async function getDashboardData(): Promise<DashboardData | null> {
   const range = getMonthRange();
-  const authEnabled = hasSupabaseEnv();
-
-  if (!authEnabled) {
+  if (!hasFirebaseEnv()) {
     return getDemoDashboardData({ authEnabled: false });
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  const sessionUser = await getSessionUser();
+  if (!sessionUser) {
     return getDemoDashboardData({ authEnabled: true });
   }
 
+  const uid = sessionUser.uid;
+  const db = getAdminDb();
+  const startTs = Timestamp.fromDate(range.start);
+  const endTs = Timestamp.fromDate(range.end);
+
   const [
-    profileResult,
-    gamesResult,
-    userGamesResult,
-    budgetResult,
-    paymentsResult,
-    gachaLogsResult,
-    bannersResult,
-    userBannersResult,
-    pullSessionsResult,
-    pullsResult,
-    guardrailRulesResult,
+    userSnap,
+    prefSnap,
+    gamesSnap,
+    configsSnap,
+    userGamesSnap,
+    gameStatesSnap,
+    budgetSnap,
+    paymentsSnap,
+    gachaLogsSnap,
+    publicBannersSnap,
+    privateBannersSnap,
+    userBannersSnap,
+    pullSessionsSnap,
+    pullsSnap,
+    guardrailRulesSnap,
   ] = await Promise.all([
-    supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
-    supabase.from("games").select("*").order("name"),
-    supabase
-      .from("user_games")
-      .select(USER_GAME_SELECT)
-      .eq("user_id", user.id)
-      .eq("is_active", true)
-      .order("created_at"),
-    supabase
-      .from("budgets")
-      .select("*")
-      .eq("user_id", user.id)
-      .eq("year_month", range.yearMonth)
-      .maybeSingle(),
-    supabase
-      .from("payments")
-      .select("*, user_games(games(name, slug, base_cost, hard_pity))")
-      .eq("user_id", user.id)
-      .gte("paid_at", range.startIso)
-      .lt("paid_at", range.endIso)
-      .order("paid_at", { ascending: false }),
-    supabase
-      .from("gacha_logs")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("pulled_at", { ascending: false })
-      .limit(12),
-    supabase
-      .from("banners")
-      .select(BANNER_SELECT)
-      .eq("is_active", true)
-      .order("ends_at", { ascending: true }),
-    supabase
-      .from("user_banners")
-      .select(USER_BANNER_SELECT)
-      .eq("user_id", user.id)
-      .eq("is_tracking", true)
-      .order("updated_at", { ascending: false }),
-    supabase
-      .from("pull_sessions")
-      .select(`*, user_banners(banners(id, name, featured, games(id, name, slug, base_cost)))`)
-      .eq("user_id", user.id)
-      .order("pulled_at", { ascending: false })
-      .limit(30),
-    supabase
-      .from("pulls")
-      .select(
-        `*, user_banners(current_pity, banners(id, name, featured, games(id, name, slug, base_cost)))`,
-      )
-      .eq("user_id", user.id)
-      .order("pulled_at", { ascending: false })
-      .limit(100),
-    supabase
-      .from("guardrail_rules")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: true }),
+    db.doc(`users/${uid}`).get(),
+    db.doc(`users/${uid}/gacha/main/settings/preferences`).get(),
+    db.collection("games").limit(501).get(),
+    db.collection("modules/gacha/gameConfigs").limit(501).get(),
+    db.collection(`users/${uid}/games`).limit(101).get(),
+    db.collection(`users/${uid}/gacha/main/gameStates`).limit(101).get(),
+    db.doc(`users/${uid}/gacha/main/budgets/${range.yearMonth}`).get(),
+    db.collection(`users/${uid}/gacha/main/payments`)
+      .where("paid_at", ">=", startTs)
+      .where("paid_at", "<", endTs)
+      .orderBy("paid_at", "desc")
+      .limit(1001)
+      .get(),
+    db.collection(`users/${uid}/gacha/main/gachaLogs`)
+      .orderBy("pulled_at", "desc")
+      .limit(12)
+      .get(),
+    db.collection("modules/gacha/banners")
+      .where("is_active", "==", true)
+      .limit(501)
+      .get(),
+    db.collection(`users/${uid}/gacha/main/banners`)
+      .where("is_active", "==", true)
+      .limit(101)
+      .get(),
+    db.collection(`users/${uid}/gacha/main/userBanners`)
+      .where("is_tracking", "==", true)
+      .limit(101)
+      .get(),
+    db.collection(`users/${uid}/gacha/main/pullSessions`)
+      .orderBy("pulled_at", "desc")
+      .limit(30)
+      .get(),
+    db.collection(`users/${uid}/gacha/main/pulls`)
+      .orderBy("pulled_at", "desc")
+      .limit(100)
+      .get(),
+    db.collection(`users/${uid}/gacha/main/guardrailRules`)
+      .limit(51)
+      .get(),
   ]);
 
-  const error =
-    profileResult.error ??
-    gamesResult.error ??
-    userGamesResult.error ??
-    budgetResult.error ??
-    paymentsResult.error ??
-    gachaLogsResult.error ??
-    bannersResult.error ??
-    userBannersResult.error ??
-    pullSessionsResult.error ??
-    pullsResult.error ??
-    guardrailRulesResult.error;
+  const rawGames = assertLimit(gamesSnap.docs, 500, "게임 카탈로그");
+  const rawConfigs = assertLimit(configsSnap.docs, 500, "게임 마스터 설정");
+  const rawUserGames = assertLimit(userGamesSnap.docs, 100, "보유 게임 목록");
+  const rawGameStates = assertLimit(gameStatesSnap.docs, 100, "게임 상태 목록");
+  const rawPayments = assertLimit(paymentsSnap.docs, 1000, "월간 결제 내역");
+  const rawPublicBanners = assertLimit(publicBannersSnap.docs, 500, "공개 배너 목록");
+  const rawPrivateBanners = assertLimit(privateBannersSnap.docs, 100, "개인 배너 목록");
+  const rawUserBanners = assertLimit(userBannersSnap.docs, 100, "트래킹 배너 목록");
+  const rawRules = assertLimit(guardrailRulesSnap.docs, 50, "보호 규칙 목록");
 
-  if (error) {
-    throw error;
-  }
+  const userDocData = userSnap.exists ? userDocSchema.parse(userSnap.data()) : null;
+  const prefData = prefSnap.exists ? preferencesDocSchema.parse(prefSnap.data()) : null;
+  const profile = projectProfile(uid, sessionUser, userDocData, prefData);
 
-  const fallbackProfile: ProfileRecord = {
-    id: user.id,
-    email: user.email ?? null,
-    display_name: user.user_metadata?.name ?? user.email?.split("@")[0] ?? "Guard",
-    timezone: "Asia/Seoul",
-    session_warning_amount: 50000,
-  };
+  const budget: BudgetRecord | null = budgetSnap.exists
+    ? (() => {
+        const parsed = budgetDocSchema.parse(budgetSnap.data());
+        return {
+          id: budgetSnap.id,
+          year_month: parsed.year_month,
+          total_budget: parsed.total_budget,
+          warning_at: parsed.warning_at,
+        };
+      })()
+    : null;
 
-  const guardrailRules = (guardrailRulesResult.data ?? []) as GuardrailRule[];
+  const configsMap = new Map(rawConfigs.map((d) => [d.id, gameConfigDocSchema.parse(d.data())]));
+  const parsedGames = rawGames.map((d) => ({ id: d.id, data: gameDocSchema.parse(d.data()) }));
+  const { games, gamesMap } = projectGameMasters(parsedGames, configsMap);
+
+  const gameStatesMap = new Map(rawGameStates.map((d) => [d.id, gameStateDocSchema.parse(d.data())]));
+  const parsedUserGames = rawUserGames.map((d) => ({ id: d.id, data: sharedUserGameDocSchema.parse(d.data()) }));
+  const { userGames, userGamesMap } = projectUserGames(uid, parsedUserGames, gameStatesMap, gamesMap);
+
+  const allBanners = [
+    ...rawPublicBanners.map((d) => ({ id: d.id, data: bannerDocSchema.parse(d.data()) })),
+    ...rawPrivateBanners.map((d) => ({ id: d.id, data: bannerDocSchema.parse(d.data()) })),
+  ];
+  const { banners, bannersMap } = projectBanners(allBanners, gamesMap);
+
+  const parsedUserBanners = rawUserBanners.map((d) => ({ id: d.id, data: userBannerDocSchema.parse(d.data()) }));
+  const { userBanners, userBannersMap } = projectUserBanners(uid, parsedUserBanners, bannersMap, userGamesMap, gamesMap);
+
+  const parsedPayments = rawPayments.map((d) => ({ id: d.id, data: paymentDocSchema.parse(d.data()) }));
+  const payments = projectPayments(uid, parsedPayments, userGamesMap);
+
+  const gachaLogs: GachaLogRecord[] = gachaLogsSnap.docs.map((d) => {
+    const parsed = gachaLogDocSchema.parse(d.data());
+    return {
+      id: d.id,
+      user_game_id: parsed.user_game_id,
+      pulls: parsed.pulls,
+      result: parsed.result,
+      pity_at_pull: parsed.pity_at_pull,
+      pulled_at: parsed.pulled_at,
+    };
+  });
+
+  const parsedSessions = pullSessionsSnap.docs.map((d) => ({ id: d.id, data: pullSessionDocSchema.parse(d.data()) }));
+  const pullSessions = projectPullSessions(uid, parsedSessions, userBannersMap);
+
+  const parsedPulls = pullsSnap.docs.map((d) => ({ id: d.id, data: pullDocSchema.parse(d.data()) }));
+  const pulls = projectPulls(uid, parsedPulls, userBannersMap);
+
+  const guardrailRules: GuardrailRule[] = rawRules.map((d) => {
+    const parsed = guardrailRuleDocSchema.parse(d.data());
+    return {
+      id: d.id,
+      user_id: uid,
+      kind: parsed.kind,
+      name: parsed.name,
+      threshold_amount: parsed.threshold_amount,
+      threshold_percent: parsed.threshold_percent,
+      cooldown_days: parsed.cooldown_days,
+      enabled: parsed.enabled,
+    };
+  });
 
   return {
     isDemo: false,
     authEnabled: true,
     isAuthenticated: true,
     yearMonth: range.yearMonth,
-    profile: (profileResult.data as ProfileRecord | null) ?? fallbackProfile,
-    budget: budgetResult.data as BudgetRecord | null,
-    games: (gamesResult.data ?? []) as GameMaster[],
-    userGames: (userGamesResult.data ?? []) as unknown as UserGame[],
-    banners: (bannersResult.data ?? []) as unknown as BannerRecord[],
-    userBanners: (userBannersResult.data ?? []) as unknown as UserBanner[],
-    payments: (paymentsResult.data ?? []) as unknown as PaymentRecord[],
-    gachaLogs: (gachaLogsResult.data ?? []) as GachaLogRecord[],
-    pullSessions: (pullSessionsResult.data ?? []) as unknown as PullSessionRecord[],
-    pulls: (pullsResult.data ?? []) as unknown as PullRecord[],
+    profile,
+    budget,
+    games,
+    userGames,
+    banners,
+    userBanners,
+    payments,
+    gachaLogs,
+    pullSessions,
+    pulls,
     guardrailRules,
   };
 }
