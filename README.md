@@ -29,8 +29,8 @@ Google 결제 파일(JSON/CSV/Takeout ZIP)은 브라우저에서 파싱하고 �
 - import는 지문 hash ID와 트랜잭션으로 멱등 처리하고, 반복 결제도 결정적 ID를 사용합니다.
 - pity 변경은 tracking revision 기반 트랜잭션으로 후속 결과·집계·표시 캐시를 함께 갱신합니다.
 
-권위 계약: **SipSungJang `feat/otakus-firebase:docs/otakus-firestore-contract.md`**.
-이 저장소의 `firestore.rules`는 로컬 검증용 계약 스냅샷입니다. 운영 배포는 해당 SipSungJang 브랜치의
+권위 계약: **SipSungJang `docs/otakus-firestore-contract.md`** (`main`).
+이 저장소의 `firestore.rules`는 로컬 검증용 계약 스냅샷입니다. 운영 배포는 SipSungJang 저장소의
 최신 `firestore.rules`와 `firestore.indexes.json`을 검토하여 그 저장소에서 수행합니다.
 이 작업은 어떠한 운영 rules/데이터도 배포하지 않습니다.
 
@@ -49,7 +49,7 @@ Google 결제 파일(JSON/CSV/Takeout ZIP)은 브라우저에서 파싱하고 �
 6. Project settings → Service accounts에서 서버용 키를 발급합니다. 키 JSON은 저장소에 넣지 않고
    Vercel 서버 환경 변수 `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`에만
    각각 설정합니다. private key 개행은 실제 개행 또는 `\n` 형식을 사용합니다.
-7. 운영자가 SipSungJang `feat/otakus-firebase`의 공유 rules/index를 검토·배포합니다.
+7. 운영자가 SipSungJang 저장소의 공유 rules/index를 검토·배포합니다.
    이 저장소에서는 deploy 명령을 실행하지 않습니다. Admin 권한도 최소화하세요.
 8. 아래 이관 문서를 따라 검증된 UID/게임 매핑을 만들고 dry-run 결과를 검토합니다.
    빈 Firestore에 데모 데이터가 자동 저장되지는 않습니다. 공유 카탈로그와 gameConfigs를 별도로 준비합니다.
@@ -76,6 +76,15 @@ Agent 신호를 추가하는 경우 `users/{uid}/agentSignals/{signalId}`만 사
 무소유 공통 Agent 토큰이나 자동 신호 발송은 구현하지 않습니다.
 기존 `supabase/` SQL과 seed는 **역사적 참고**이며 앱 런타임/설치 절차가 아닙니다.
 이관 방법과 제약은 [이관 문서](docs/firebase-migration.md)를 참고하세요.
+
+## OtakuS 서비스 런처
+
+사이드바와 설정 화면에서 OtakuS 형제 서비스(`SipSungJang`, `OtakuHub`)로 이동하는 통합 런처(`AppLauncher`)를 제공합니다.
+
+- `NEXT_PUBLIC_SIPSUNGJANG_URL`: SipSungJang 배포 주소
+- `NEXT_PUBLIC_OTAKUHUB_URL`: OtakuHub 배포 주소
+
+환경 변수에 유효한 HTTPS URL을 설정하면 사이드바 및 설정 화면 런처가 활성화되며, 미설정 시 **연결 준비 중**으로 표시됩니다.
 
 ## 검증
 

@@ -15,6 +15,7 @@ import {
 import type { ReactNode } from "react";
 
 import { signOut } from "@/app/actions";
+import { AppLauncher } from "@/components/app/app-launcher";
 import { Button } from "@/components/ui/button";
 import { getAuthRedirectPath } from "@/lib/auth/redirects";
 import type { DashboardData } from "@/lib/domain/dashboard";
@@ -118,6 +119,13 @@ export function AppShell({
                 </span>
               </Link>
             ))}
+          </div>
+
+          <div className="mt-6 text-[11px] font-medium uppercase tracking-[0.04em] text-muted-foreground">
+            Services
+          </div>
+          <div className="mt-2">
+            <AppLauncher compact />
           </div>
 
           <div className="absolute inset-x-3 bottom-4 rounded-lg bg-muted p-3">

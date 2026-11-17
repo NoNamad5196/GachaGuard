@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Download, Mail, Trash2, Upload } from "lucide-react";
 
+import { AppLauncher } from "@/components/app/app-launcher";
 import {
   DesignCard,
   EmptyState,
@@ -144,6 +145,13 @@ export function SettingsPage({
         <div className="mt-4">
           <TemplateApplyForm isDemo={data.isDemo} />
         </div>
+      </DesignCard>
+
+      <DesignCard
+        title="서비스 런처"
+        sub="같은 계정과 게임을 공유하는 OtakuS 연결 서비스"
+      >
+        <AppLauncher />
       </DesignCard>
     </div>
   );
