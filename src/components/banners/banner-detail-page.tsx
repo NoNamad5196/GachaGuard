@@ -60,7 +60,7 @@ export function BannerDetailPage({
         </Button>
       </div>
 
-      <section className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <section className="flex flex-col gap-3 rounded-md border border-border/80 bg-[#13161f] p-4.5 sm:flex-row sm:items-end sm:justify-between zzz-panel-shadow">
         <div>
           <div className="mb-2 flex flex-wrap gap-2">
             <ToneBadge>{BANNER_TYPE_LABELS[banner.banner_type]}</ToneBadge>
@@ -73,8 +73,10 @@ export function BannerDetailPage({
               {userBanner ? "추적 중" : "미추적"}
             </ToneBadge>
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{banner.name}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <h1 className="font-heading text-2xl font-black uppercase tracking-tight text-foreground sm:text-3xl">
+            {banner.name}
+          </h1>
+          <p className="mt-1 font-mono text-xs text-muted-foreground">
             {banner.games.name} · 픽업 {banner.featured}
           </p>
         </div>
@@ -88,7 +90,11 @@ export function BannerDetailPage({
           ) : (
             <form action={trackBanner}>
               <input type="hidden" name="bannerId" value={banner.id} />
-              <Button type="submit" disabled={data.isDemo}>
+              <Button
+                type="submit"
+                disabled={data.isDemo}
+                className="bg-[var(--brand)] font-heading font-bold uppercase tracking-tight text-[#0b0d11] shadow-[0_0_12px_rgba(212,255,42,0.25)] hover:bg-[var(--brand)]/90"
+              >
                 추적 시작
               </Button>
             </form>
@@ -98,12 +104,12 @@ export function BannerDetailPage({
 
       <section className="grid gap-4 xl:grid-cols-[1fr_1.4fr]">
         <DesignCard>
-          <div className="rounded-lg border bg-[var(--surface-2)] p-5">
-            <div className="text-[11px] font-medium uppercase tracking-[0.04em] text-muted-foreground">
-              5성 Rate-up
+          <div className="rounded-sm border-2 border-border/80 bg-[var(--surface-2)] p-4.5 zzz-panel-shadow">
+            <div className="font-mono text-[10.5px] font-bold uppercase tracking-wider text-[var(--gold)]">
+              {"// 5★ RATE_UP TARGET"}
             </div>
-            <h2 className="mt-2 text-2xl font-semibold">{banner.featured}</h2>
-            <p className="mt-2 text-sm text-muted-foreground">
+            <h2 className="mt-1.5 font-heading text-2xl font-black uppercase tracking-tight text-foreground">{banner.featured}</h2>
+            <p className="mt-1 font-mono text-xs text-muted-foreground">
               기본 확률 {formatPercent(banner.base_rate)} · 5성 획득 시 픽업 확률{" "}
               {formatPercent(banner.rate_up, 0)}
             </p>
@@ -204,9 +210,9 @@ function ProbabilityCurve({
     padding + (Math.min(currentPity, banner.hard_pity - 1) / denominator) * (width - padding * 2);
 
   return (
-    <div className="overflow-hidden rounded-lg border bg-muted/20 p-3">
+    <div className="overflow-hidden rounded-sm border-2 border-border bg-card/60 p-3 zzz-panel-shadow">
       <svg viewBox={`0 0 ${width} ${height}`} className="h-[260px] w-full" role="img" aria-label="배너 확률 곡선">
-        <g stroke="#E7E5E0" strokeWidth="1">
+        <g stroke="#282e3f" strokeWidth="1">
           {[0.25, 0.5, 0.75, 1].map((line) => (
             <line
               key={line}
@@ -223,12 +229,13 @@ function ProbabilityCurve({
             x2={padding + ((banner.soft_pity - 1) / denominator) * (width - padding * 2)}
             y1={padding}
             y2={height - padding}
-            stroke="#B5751E"
+            stroke="#ff6b00"
             strokeDasharray="4 4"
+            strokeWidth="2"
           />
         ) : null}
-        <path d={path} fill="none" stroke="#1B8A6B" strokeWidth="3" strokeLinecap="round" />
-        <line x1={cursorX} x2={cursorX} y1={padding} y2={height - padding} stroke="#0F1115" strokeWidth="1.5" />
+        <path d={path} fill="none" stroke="#d9ff00" strokeWidth="3" strokeLinecap="round" />
+        <line x1={cursorX} x2={cursorX} y1={padding} y2={height - padding} stroke="#00e5ff" strokeWidth="2" />
         <circle
           cx={cursorX}
           cy={
@@ -241,16 +248,16 @@ function ProbabilityCurve({
             }) *
               (height - padding * 2)
           }
-          r="5"
-          fill="#1B8A6B"
-          stroke="#fff"
-          strokeWidth="2"
+          r="6"
+          fill="#d9ff00"
+          stroke="#0b0c10"
+          strokeWidth="2.5"
         />
       </svg>
-      <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+      <div className="flex flex-wrap gap-4 font-mono text-xs text-muted-foreground mt-2">
         <span>soft pity {banner.soft_pity ?? "-"}</span>
         <span>hard pity {banner.hard_pity}</span>
-        <span>현재 {currentPity}</span>
+        <span className="text-[var(--brand)] font-bold">현재 {currentPity}</span>
       </div>
     </div>
   );

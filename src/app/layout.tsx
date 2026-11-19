@@ -45,8 +45,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko" className="h-full antialiased">
-      <body className="flex min-h-full flex-col">
+    <html lang="ko" className="dark h-full antialiased">
+      <body className="flex min-h-full flex-col bg-background text-foreground selection:bg-[var(--primary)] selection:text-[var(--primary-foreground)]">
+        <div className="pointer-events-none fixed inset-0 z-50 zzz-scanlines opacity-40 mix-blend-overlay" aria-hidden="true" />
         <AuthProvider><TooltipProvider>{children}</TooltipProvider></AuthProvider>
         <Analytics />
       </body>

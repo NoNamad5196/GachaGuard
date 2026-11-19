@@ -78,34 +78,43 @@ export function AppLauncher({ compact = false }: { compact?: boolean }) {
 
         const cardClass = compact
           ? cn(
-              "flex items-center justify-between gap-2 rounded-md border px-2.5 py-2 text-left transition-colors",
+              "flex items-center justify-between gap-2 rounded-sm border-2 px-2.5 py-1.5 text-left font-mono transition-all",
               s.current
-                ? "border-[var(--brand)] bg-[var(--brand-tint)] text-foreground"
+                ? "border-[var(--brand)] bg-[var(--brand)]/10 text-foreground shadow-[2px_2px_0px_#000]"
                 : s.href
-                  ? "border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
-                  : "cursor-not-allowed border-border bg-muted/40 text-muted-foreground opacity-75",
+                  ? "border-border bg-card text-muted-foreground hover:border-[var(--brand)]/60 hover:bg-muted/40 hover:text-foreground"
+                  : "cursor-not-allowed border-border/50 bg-muted/20 text-muted-foreground/60 opacity-60",
             )
           : cn(
-              "flex flex-col items-start gap-2 rounded-lg border p-4 text-left transition-colors",
+              "relative flex flex-col items-start gap-2 overflow-hidden rounded-sm border-2 p-4 text-left font-mono transition-all zzz-panel-shadow",
               s.current
-                ? "border-[var(--brand)] bg-[var(--brand-tint)]/45 hover:border-[var(--brand-ink)]"
+                ? "border-[var(--brand)] bg-card shadow-[3px_3px_0px_#000] hover:border-[var(--brand)]"
                 : s.href
-                  ? "border-border bg-card hover:bg-muted"
-                  : "cursor-not-allowed border-border bg-muted/50 opacity-70",
+                  ? "border-border bg-card hover:border-[var(--brand)]/60 hover:bg-muted/30"
+                  : "cursor-not-allowed border-border/50 bg-muted/20 opacity-60",
             );
 
         const content = compact ? (
           <>
             <span className="flex min-w-0 items-center gap-2">
-              <span aria-hidden="true" className="text-xs font-bold" style={{ color: s.color }}>
+              <span
+                aria-hidden="true"
+                className="grid size-5 place-items-center rounded-xs text-xs font-bold"
+                style={{
+                  color: s.color,
+                  backgroundColor: `${s.color}20`,
+                }}
+              >
                 {s.icon}
               </span>
-              <strong className="truncate text-xs font-semibold">{s.name}</strong>
+              <strong className="truncate font-heading text-xs font-bold tracking-tight text-foreground">
+                {s.name}
+              </strong>
             </span>
             <span
               className={cn(
-                "shrink-0 text-[10px] font-semibold",
-                s.current || s.href ? "text-[var(--brand-ink)]" : "text-muted-foreground",
+                "shrink-0 font-mono text-[10px] font-semibold uppercase",
+                s.current ? "text-[var(--brand)]" : s.href ? "text-muted-foreground" : "text-muted-foreground/50",
               )}
             >
               {statusLabel}
@@ -113,23 +122,38 @@ export function AppLauncher({ compact = false }: { compact?: boolean }) {
           </>
         ) : (
           <>
-            <span
-              aria-hidden="true"
-              className="flex size-9 items-center justify-center rounded-lg border text-base font-bold"
-              style={{
-                color: s.color,
-                borderColor: `${s.color}40`,
-                backgroundColor: `${s.color}14`,
-              }}
-            >
-              {s.icon}
-            </span>
-            <strong className="text-sm font-bold text-foreground">{s.name}</strong>
+            <div className="flex w-full items-center justify-between">
+              <span
+                aria-hidden="true"
+                className="flex size-9 items-center justify-center rounded-sm border text-base font-bold"
+                style={{
+                  color: s.color,
+                  borderColor: `${s.color}50`,
+                  backgroundColor: `${s.color}15`,
+                  boxShadow: `0 0 10px ${s.color}25`,
+                }}
+              >
+                {s.icon}
+              </span>
+              <span
+                className={cn(
+                  "rounded-xs border px-1.5 py-0.5 text-[9.5px] font-mono font-bold uppercase",
+                  s.current
+                    ? "border-[var(--brand)]/60 bg-[var(--brand)]/15 text-[var(--brand)]"
+                    : s.href
+                      ? "border-border bg-muted/40 text-muted-foreground"
+                      : "border-border/40 text-muted-foreground/50",
+                )}
+              >
+                {s.current ? "LIVE" : s.href ? "LINKED" : "STANDBY"}
+              </span>
+            </div>
+            <strong className="font-heading text-base font-bold tracking-tight text-foreground">{s.name}</strong>
             <small className="text-xs leading-5 text-muted-foreground">{s.description}</small>
             <span
               className={cn(
-                "mt-auto pt-1 text-[11px] font-semibold",
-                s.current || s.href ? "text-[var(--brand-ink)]" : "text-muted-foreground",
+                "mt-auto pt-2 font-mono text-[11px] font-semibold uppercase",
+                s.current ? "text-[var(--brand)]" : s.href ? "text-foreground group-hover:text-[var(--brand)]" : "text-muted-foreground/60",
               )}
             >
               {statusLabel}

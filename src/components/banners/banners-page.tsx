@@ -30,14 +30,18 @@ export function BannersPage({ data }: { data: DashboardData }) {
     <div className="space-y-5" data-screen-label="Banners">
       <section className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Banners</h1>
+          <div className="mb-1 flex items-center gap-2 font-mono text-[10px] font-bold text-[var(--brand)] uppercase tracking-wider">
+            <span className="inline-block size-1.5 rounded-full bg-[var(--brand)] shadow-[0_0_6px_var(--brand)]" />
+            <span>{"// PROXY_DATABASE // BANNERS_HUD"}</span>
+          </div>
+          <h1 className="font-heading text-2xl font-black tracking-tight text-foreground uppercase sm:text-3xl">Banners</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             활성 배너를 추적하고, 천장까지 남은 횟수와 예상 비용을 비교합니다.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <ToneBadge tone="info">{data.banners.length}개 활성 배너</ToneBadge>
-          {customCount > 0 ? <ToneBadge>{customCount}개 직접 등록</ToneBadge> : null}
+          {customCount > 0 ? <ToneBadge tone="gold">{customCount}개 직접 등록</ToneBadge> : null}
           {data.isDemo ? (
             <Button size="sm" disabled>
               <Plus className="size-4" /> 직접 등록
@@ -97,31 +101,31 @@ function BannerCard({
       className="min-h-[300px]"
       bodyClassName="flex h-full flex-col gap-4"
     >
-      <div className="rounded-lg border bg-[var(--surface-2)] p-4">
+      <div className="rounded-sm border-2 border-border/80 bg-[var(--surface-2)] p-4 zzz-panel-shadow">
         <div className="flex items-center justify-between gap-3">
           <div className="flex flex-wrap gap-2">
             <ToneBadge>{BANNER_TYPE_LABELS[banner.banner_type]}</ToneBadge>
             {!banner.is_public ? <ToneBadge tone="gold">내 배너</ToneBadge> : null}
           </div>
-          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1 font-mono text-xs text-muted-foreground">
             <CalendarClock className="size-3" />
             {daysLeft > 0 ? `${daysLeft}일 남음` : "종료 임박"}
           </span>
         </div>
-        <div className="mt-8">
-          <div className="text-[11px] font-medium uppercase tracking-[0.04em] text-muted-foreground">
-            Featured
+        <div className="mt-6">
+          <div className="font-mono text-[10px] font-bold uppercase tracking-wider text-[var(--brand)]">
+            {"// FEATURED_TARGET"}
           </div>
-          <h2 className="mt-1 text-xl font-semibold">{banner.featured}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">{banner.games.name}</p>
+          <h2 className="mt-1 font-heading text-xl font-black uppercase tracking-tight text-foreground">{banner.featured}</h2>
+          <p className="mt-1 font-mono text-xs text-muted-foreground">{banner.games.name}</p>
         </div>
       </div>
 
       <div className="min-w-0">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="truncate text-base font-semibold">{banner.name}</h3>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <h3 className="truncate font-heading text-base font-bold uppercase tracking-tight text-foreground">{banner.name}</h3>
+            <p className="mt-1 font-mono text-xs text-muted-foreground">
               기본 {formatPercent(banner.base_rate)} · 픽업 {formatPercent(banner.rate_up, 0)}
             </p>
           </div>
@@ -131,7 +135,7 @@ function BannerCard({
         </div>
 
         <div className="mt-4 space-y-2">
-          <div className="flex justify-between text-xs text-muted-foreground">
+          <div className="flex justify-between font-mono text-xs text-muted-foreground">
             <span>pity {pity}/{banner.hard_pity}</span>
             <span>{remaining}회 남음</span>
           </div>
@@ -140,25 +144,29 @@ function BannerCard({
       </div>
 
       <div className="mt-auto grid grid-cols-2 gap-3">
-        <StatBlock label="다음 5성 확률" value={formatPercent(nextChance)} />
+        <StatBlock label="다음 5성 확률" value={formatPercent(nextChance)} tone="gold" />
         <StatBlock label="천장 예상 비용" value={formatKrw(estimatedCost)} />
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <Button asChild variant="outline">
+        <Button asChild variant="outline" className="font-heading font-bold uppercase tracking-tight">
           <Link href={`/banners/${banner.id}`}>
             상세
             <ChevronRight className="size-4" />
           </Link>
         </Button>
         {userBanner ? (
-          <Button asChild>
+          <Button asChild className="bg-[var(--brand)] font-heading font-bold uppercase tracking-tight text-[#0b0d11] shadow-[0_0_10px_rgba(212,255,42,0.25)] hover:bg-[var(--brand)]/90">
             <Link href="/pulls">기록하기</Link>
           </Button>
         ) : (
           <form action={trackBanner}>
             <input type="hidden" name="bannerId" value={banner.id} />
-            <Button type="submit" className="w-full" disabled={isDemo}>
+            <Button
+              type="submit"
+              className="w-full bg-[var(--brand)] font-heading font-bold uppercase tracking-tight text-[#0b0d11] shadow-[0_0_10px_rgba(212,255,42,0.25)] hover:bg-[var(--brand)]/90"
+              disabled={isDemo}
+            >
               추적 시작
             </Button>
           </form>

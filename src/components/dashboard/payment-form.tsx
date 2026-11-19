@@ -135,10 +135,10 @@ export function PaymentForm({
           <div className="grid gap-2">
             <Label>게임</Label>
             <Select value={userGameId} onValueChange={setUserGameId} disabled={!canMutate}>
-              <SelectTrigger className="w-full rounded-md">
+              <SelectTrigger className="w-full rounded-sm border-2 border-input bg-card/60">
                 <SelectValue placeholder="게임 선택" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="border-2 border-border bg-card zzz-panel-shadow">
                 {userGames.map((userGame) => (
                   <SelectItem key={userGame.id} value={userGame.id}>
                     {userGame.games.name}
@@ -154,10 +154,10 @@ export function PaymentForm({
               onValueChange={(value) => setType(value as PaymentType)}
               disabled={!canMutate}
             >
-              <SelectTrigger className="w-full rounded-md">
+              <SelectTrigger className="w-full rounded-sm border-2 border-input bg-card/60">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="border-2 border-border bg-card zzz-panel-shadow">
                 {PAYMENT_TYPES.map((paymentType) => (
                   <SelectItem key={paymentType} value={paymentType}>
                     {PAYMENT_TYPE_LABELS[paymentType]}
@@ -191,9 +191,10 @@ export function PaymentForm({
                 key={quickAmount}
                 type="button"
                 variant="secondary"
-                size="sm"
+                size="xs"
                 disabled={!canMutate}
                 onClick={() => setAmount(String(quickAmount))}
+                className="font-mono text-xs border border-border/80 hover:border-[var(--brand)]/60 hover:text-[var(--brand)]"
               >
                 {quickAmount.toLocaleString("ko-KR")}
               </Button>
@@ -213,8 +214,12 @@ export function PaymentForm({
           />
         </div>
 
-        <Button type="submit" className="w-full" disabled={!canMutate || isPending}>
-          <Plus className="h-4 w-4" />
+        <Button
+          type="submit"
+          className="w-full bg-[var(--brand)] font-heading font-bold uppercase tracking-tight text-[#0b0d11] shadow-[0_0_12px_rgba(212,255,42,0.25)] hover:bg-[var(--brand)]/90 hover:shadow-[0_0_16px_rgba(212,255,42,0.4)]"
+          disabled={!canMutate || isPending}
+        >
+          <Plus className="h-4 w-4 stroke-[2.5]" />
           지출 기록
         </Button>
       </form>

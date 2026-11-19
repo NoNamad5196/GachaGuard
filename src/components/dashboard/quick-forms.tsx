@@ -24,7 +24,7 @@ export function BudgetForm({ data }: { data: DashboardData }) {
           min={0}
           defaultValue={data.budget?.total_budget ?? 220000}
           disabled={data.isDemo}
-          className="metric-tabular"
+          className="metric-tabular font-mono"
         />
       </div>
       <div className="grid gap-2">
@@ -37,10 +37,14 @@ export function BudgetForm({ data }: { data: DashboardData }) {
           max={100}
           defaultValue={data.budget?.warning_at ?? 70}
           disabled={data.isDemo}
-          className="metric-tabular"
+          className="metric-tabular font-mono"
         />
       </div>
-      <Button type="submit" disabled={data.isDemo}>
+      <Button
+        type="submit"
+        disabled={data.isDemo}
+        className="bg-[var(--brand)] font-heading font-bold uppercase tracking-tight text-[#0b0d11] hover:bg-[var(--brand)]/90 shadow-[0_0_12px_rgba(212,255,42,0.25)]"
+      >
         예산 저장
       </Button>
     </form>
@@ -59,11 +63,11 @@ export function AddGameForm({ data }: { data: DashboardData }) {
           id="gameId"
           name="gameId"
           disabled={data.isDemo || availableGames.length === 0}
-          className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+          className="h-8.5 rounded-sm border border-input bg-[var(--surface-sunken)] px-3 font-mono text-xs text-foreground focus-visible:border-[var(--brand)] outline-none"
           required
         >
           {availableGames.map((game) => (
-            <option key={game.id} value={game.id}>
+            <option key={game.id} value={game.id} className="bg-popover text-popover-foreground">
               {game.name}
             </option>
           ))}
@@ -79,6 +83,7 @@ export function AddGameForm({ data }: { data: DashboardData }) {
             min={0}
             defaultValue={50000}
             disabled={data.isDemo}
+            className="font-mono text-xs"
           />
         </div>
         <div className="grid gap-2">
@@ -90,11 +95,16 @@ export function AddGameForm({ data }: { data: DashboardData }) {
             min={0}
             defaultValue={0}
             disabled={data.isDemo}
+            className="font-mono text-xs"
           />
         </div>
       </div>
       <input type="hidden" name="warningThresholdPercent" value="70" />
-      <Button type="submit" disabled={data.isDemo || availableGames.length === 0}>
+      <Button
+        type="submit"
+        disabled={data.isDemo || availableGames.length === 0}
+        className="bg-[var(--brand)] font-heading font-bold uppercase tracking-tight text-[#0b0d11] hover:bg-[var(--brand)]/90 shadow-[0_0_12px_rgba(212,255,42,0.25)]"
+      >
         게임 저장
       </Button>
     </form>
@@ -104,7 +114,7 @@ export function AddGameForm({ data }: { data: DashboardData }) {
 export function TemplateApplyForm({ isDemo }: { isDemo: boolean }) {
   return (
     <form action={applyMonthlyTemplates}>
-      <Button type="submit" variant="secondary" className="w-full" disabled={isDemo}>
+      <Button type="submit" variant="secondary" className="w-full font-heading font-bold uppercase tracking-tight" disabled={isDemo}>
         이번 달 반복 결제 반영
       </Button>
     </form>
@@ -128,10 +138,10 @@ export function GachaLogInlineForm({
           min={0}
           defaultValue={userGame.current_pity}
           disabled={isDemo}
-          className="metric-tabular"
+          className="metric-tabular font-mono text-xs"
           aria-label={`${userGame.games.name} 현재 pity`}
         />
-        <Button type="submit" variant="secondary" disabled={isDemo}>
+        <Button type="submit" variant="secondary" size="sm" disabled={isDemo} className="font-heading font-bold uppercase tracking-tight">
           갱신
         </Button>
       </form>
@@ -146,9 +156,15 @@ export function GachaLogInlineForm({
             min={1}
             defaultValue={10}
             disabled={isDemo}
+            className="font-mono text-xs"
             aria-label={`${userGame.games.name} 뽑기 횟수`}
           />
-          <Button type="submit" disabled={isDemo}>
+          <Button
+            type="submit"
+            disabled={isDemo}
+            size="sm"
+            className="bg-[var(--brand)] font-heading font-bold uppercase tracking-tight text-[#0b0d11] hover:bg-[var(--brand)]/90"
+          >
             뽑기 추가
           </Button>
         </div>
@@ -156,6 +172,7 @@ export function GachaLogInlineForm({
           name="result"
           placeholder="결과 메모"
           disabled={isDemo}
+          className="font-mono text-xs"
           aria-label={`${userGame.games.name} 뽑기 결과`}
         />
       </form>

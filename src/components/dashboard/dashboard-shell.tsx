@@ -60,31 +60,43 @@ export function DashboardShell({
   const trackedBannerIds = new Set(data.userBanners.map((item) => item.banner_id));
   const suggestedBanners = data.banners.filter((banner) => !trackedBannerIds.has(banner.id));
 
+  const budgetHazard =
+    warning.level === "over" || warning.level === "limit"
+      ? "danger"
+      : warning.level === "warning"
+        ? "caution"
+        : undefined;
+
   return (
-    <div className="space-y-5" data-screen-label="Dashboard">
-      <section className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div className="space-y-6" data-screen-label="Dashboard">
+      <section className="flex flex-col gap-3 rounded-md border border-border/80 bg-[#13161f] p-4.5 sm:flex-row sm:items-end sm:justify-between zzz-panel-shadow">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Dashboard</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 font-mono text-[11px] font-bold text-[var(--brand)] uppercase tracking-widest">
+            <span>[ SYSTEM: MONITORING // LIVE ]</span>
+          </div>
+          <h1 className="mt-1 font-heading text-3xl font-extrabold tracking-tight sm:text-4xl uppercase text-foreground">
+            Dashboard
+          </h1>
+          <p className="mt-1 font-mono text-xs text-muted-foreground">
             이번 달 예산, pity, 뽑기 기록을 한 화면에서 확인합니다.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button asChild variant="outline" size="sm">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button asChild variant="outline" size="sm" className="font-heading font-bold text-xs uppercase tracking-tight">
             <Link href="/imports/google">
-              <Upload className="size-4" />
+              <Upload className="size-3.5" />
               Google 결제 가져오기
             </Link>
           </Button>
           <ToneBadge tone={data.isDemo ? "warn" : "safe"}>
-            <ShieldCheck className="size-3" />
+            <ShieldCheck className="size-3 stroke-[2.5]" />
             {data.isAuthenticated
               ? "Firebase 보호 중"
               : data.authEnabled
                 ? "로그인하면 저장 가능"
                 : "Demo Mode"}
           </ToneBadge>
-          <ToneBadge>{data.yearMonth}</ToneBadge>
+          <ToneBadge tone="info">{data.yearMonth}</ToneBadge>
         </div>
       </section>
 
@@ -100,68 +112,68 @@ export function DashboardShell({
         </Alert>
       ) : null}
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <DesignCard bodyClassName="p-4">
+      <section className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
+        <DesignCard bodyClassName="p-4.5 space-y-3" hazard={budgetHazard}>
           <StatBlock
             label="이번 달 지출"
             value={formatKrw(monthlySpend)}
             delta={`${formatKrw(budgetAmount)} 예산 중 ${warning.percent}%`}
-            tone={warning.level === "over" || warning.level === "limit" ? "danger" : "default"}
+            tone={warning.level === "over" || warning.level === "limit" ? "danger" : warning.level === "warning" ? "warn" : "safe"}
           />
           <ProgressBar
             value={warning.percent}
-            tone={warning.level === "over" || warning.level === "limit" ? "danger" : "safe"}
+            tone={warning.level === "over" || warning.level === "limit" ? "danger" : warning.level === "warning" ? "warn" : "safe"}
             thick
           />
         </DesignCard>
-        <DesignCard bodyClassName="p-4">
+        <DesignCard bodyClassName="p-4.5 space-y-3">
           <StatBlock
             label="남은 예산"
             value={formatKrw(warning.remaining)}
             delta={`경고선 ${formatKrw(warning.thresholdAmount)}`}
             tone={warning.level === "warning" ? "warn" : warning.level === "over" ? "danger" : "safe"}
           />
-          <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-            <WalletCards className="size-3.5" />
+          <div className="flex items-center gap-2 font-mono text-[11px] text-muted-foreground">
+            <WalletCards className="size-3.5 text-[var(--brand)]" />
             실제 결제 기록 기준
           </div>
         </DesignCard>
-        <DesignCard bodyClassName="p-4">
+        <DesignCard bodyClassName="p-4.5 space-y-3">
           <StatBlock
             label="월말 예상"
             value={formatKrw(pace.projected)}
             delta={`오늘 기준 예상치 ${formatKrw(pace.expectedSpend)}`}
             tone={pace.projected > budgetAmount ? "danger" : "safe"}
           />
-          <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-            <Gauge className="size-3.5" />
+          <div className="flex items-center gap-2 font-mono text-[11px] text-muted-foreground">
+            <Gauge className="size-3.5 text-[var(--info)]" />
             {pace.day}/{pace.daysInMonth}일 진행
           </div>
         </DesignCard>
-        <DesignCard bodyClassName="p-4">
+        <DesignCard bodyClassName="p-4.5 space-y-3">
           <StatBlock
             label="오늘 기록한 지출"
             value={formatKrw(todaySpent)}
             delta={`${formatKrw(data.profile.session_warning_amount)} 이상이면 확인`}
             tone={todaySpent >= data.profile.session_warning_amount ? "warn" : "default"}
           />
-          <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-            <CalendarClock className="size-3.5" />
+          <div className="flex items-center gap-2 font-mono text-[11px] text-muted-foreground">
+            <CalendarClock className="size-3.5 text-[var(--gold)]" />
             Asia/Seoul 기준
           </div>
         </DesignCard>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[1.55fr_0.95fr]">
-        <div className="space-y-4">
+      <section className="grid gap-4.5 xl:grid-cols-[1.55fr_0.95fr]">
+        <div className="space-y-4.5">
           <DesignCard
             title="추적 중인 배너"
             sub={`${data.userBanners.length}개 추적 중`}
             right={
-              <Button asChild variant="outline" size="sm">
+              <Button asChild variant="outline" size="xs" className="font-heading font-bold text-xs uppercase tracking-tight">
                 <Link href="/banners">
                   전체 보기
-                  <ChevronRight className="size-4" />
+                  <ChevronRight className="size-3.5" />
                 </Link>
               </Button>
             }
@@ -194,7 +206,7 @@ export function DashboardShell({
           </DesignCard>
         </div>
 
-        <aside className="space-y-4">
+        <aside className="space-y-4.5">
           <DesignCard title="빠른 지출 기록" sub="예산 계산에 바로 반영됩니다">
             <PaymentForm
               userGames={data.userGames}
@@ -208,13 +220,13 @@ export function DashboardShell({
           </DesignCard>
 
           <DesignCard title="가드레일 상태" sub="숫자는 알려주고, 판단은 사용자가 합니다">
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {data.guardrailRules.slice(0, 4).map((rule) => (
-                <div key={rule.id} className="flex items-start gap-3 rounded-md border bg-muted/30 p-3">
-                  <Target className="mt-0.5 size-4 text-[var(--brand)]" />
+                <div key={rule.id} className="flex items-start gap-3 rounded-sm border border-border/80 bg-muted/20 p-3 zzz-panel-shadow">
+                  <Target className="mt-0.5 size-4 text-[var(--brand)] stroke-[2.5]" />
                   <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium">{rule.name}</div>
-                    <div className="mt-1 text-xs text-muted-foreground">
+                    <div className="font-heading text-sm font-bold uppercase tracking-tight text-foreground">{rule.name}</div>
+                    <div className="mt-0.5 font-mono text-xs text-muted-foreground">
                       {rule.threshold_percent
                         ? `${rule.threshold_percent}% 기준`
                         : rule.threshold_amount
@@ -240,20 +252,20 @@ export function DashboardShell({
               {data.pulls.slice(0, 6).map((pull) => (
                 <div
                   key={pull.id}
-                  className="flex items-center gap-3 border-b border-border py-3 last:border-b-0"
+                  className="flex items-center gap-3 border-b border-border/70 py-2.5 last:border-b-0 hover:bg-muted/30 px-1 rounded-xs transition-colors"
                 >
                   <ToneBadge tone={pull.rarity >= 5 ? "gold" : pull.rarity >= 4 ? "info" : "default"}>
                     {pull.rarity}성
                   </ToneBadge>
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium">
+                    <div className="truncate font-medium text-sm text-foreground">
                       {pull.item_name ?? "결과 미입력"}
                     </div>
-                    <div className="truncate text-xs text-muted-foreground">
+                    <div className="truncate font-mono text-[11px] text-muted-foreground">
                       {pull.user_banners?.banners?.name ?? "배너"} · pity {pull.pity_before}
                     </div>
                   </div>
-                  <span className="font-mono text-xs text-muted-foreground tabular-nums">
+                  <span className="font-mono text-xs font-bold text-foreground tabular-nums">
                     {formatKrw(pull.cost)}
                   </span>
                 </div>
@@ -284,27 +296,29 @@ function TrackedBannerCard({ userBanner }: { userBanner: UserBanner }) {
   return (
     <Link
       href={`/banners/${banner.id}`}
-      className="rounded-lg border bg-muted/25 p-4 transition-colors hover:bg-muted/50"
+      className="group block rounded-sm border border-border/80 bg-muted/20 p-3.5 transition-all hover:border-[var(--brand)]/80 hover:bg-muted/40 zzz-panel-shadow"
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <h3 className="truncate text-sm font-semibold">{banner.name}</h3>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <h3 className="min-w-0 max-w-full truncate font-heading text-sm font-bold uppercase tracking-tight text-foreground group-hover:text-[var(--brand)]">
+              {banner.name}
+            </h3>
             {!banner.is_public ? <ToneBadge tone="info">내 배너</ToneBadge> : null}
             <ToneBadge tone={remaining <= 10 ? "danger" : "safe"}>
               {remaining}회 남음
             </ToneBadge>
           </div>
-          <p className="mt-1 truncate text-xs text-muted-foreground">
+          <p className="mt-1 truncate font-mono text-[11px] text-muted-foreground">
             {banner.games.name} · {banner.featured}
           </p>
         </div>
-        <span className="font-mono text-xs text-muted-foreground tabular-nums">
+        <span className="shrink-0 font-mono text-xs font-bold text-[var(--gold)] tabular-nums">
           {formatPercent(nextChance)}
         </span>
       </div>
-      <div className="mt-4 space-y-2">
-        <div className="flex justify-between text-xs text-muted-foreground">
+      <div className="mt-3.5 space-y-1.5">
+        <div className="flex justify-between font-mono text-[11px] text-muted-foreground">
           <span>pity {userBanner.current_pity}/{banner.hard_pity}</span>
           <span>{userBanner.pulls_total} pulls</span>
         </div>
@@ -324,15 +338,17 @@ function SuggestedBannerCard({
   const daysLeft = getDaysUntil(banner.ends_at);
 
   return (
-    <div className="rounded-lg border bg-muted/25 p-4">
+    <div className="rounded-sm border border-border/80 bg-muted/20 p-3.5 zzz-panel-shadow">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <h3 className="truncate text-sm font-semibold">{banner.name}</h3>
+          <div className="flex items-center gap-1.5">
+            <h3 className="truncate font-heading text-sm font-bold uppercase tracking-tight text-foreground">
+              {banner.name}
+            </h3>
             <ToneBadge>{BANNER_TYPE_LABELS[banner.banner_type]}</ToneBadge>
             {!banner.is_public ? <ToneBadge tone="info">내 배너</ToneBadge> : null}
           </div>
-          <p className="mt-1 truncate text-xs text-muted-foreground">
+          <p className="mt-1 truncate font-mono text-[11px] text-muted-foreground">
             {banner.games.name} · {banner.featured}
           </p>
         </div>
@@ -340,9 +356,9 @@ function SuggestedBannerCard({
           {daysLeft > 0 ? `${daysLeft}일` : "종료"}
         </ToneBadge>
       </div>
-      <form action={trackBanner} className="mt-4">
+      <form action={trackBanner} className="mt-3.5">
         <input type="hidden" name="bannerId" value={banner.id} />
-        <Button type="submit" variant="outline" size="sm" disabled={isDemo} className="w-full">
+        <Button type="submit" variant="outline" size="sm" disabled={isDemo} className="w-full font-heading font-bold uppercase tracking-tight">
           추적 시작
         </Button>
       </form>

@@ -79,17 +79,21 @@ export function AuthCta({
   return (
     <div
       className={cn(
-        "rounded-lg border border-border bg-muted/30 p-4",
+        "relative overflow-hidden rounded-sm border-2 border-border bg-card zzz-panel-shadow p-4",
         compact && "p-3",
         className,
       )}
     >
+      <div className="mb-2 flex items-center gap-1.5 font-mono text-[10px] font-bold tracking-wider text-[var(--brand)] uppercase">
+        <span>{"// AUTH_GATE //"}</span>
+        <span className="text-muted-foreground">{authEnabled ? "LOGIN_REQUIRED" : "DEMO_STANDBY"}</span>
+      </div>
       <div className="flex items-start gap-3">
-        <div className="grid size-9 shrink-0 place-items-center rounded-md bg-card text-[var(--brand)]">
+        <div className="grid size-9 shrink-0 place-items-center rounded-sm border border-[var(--brand)]/50 bg-[var(--brand)]/15 text-[var(--brand)] shadow-[0_0_8px_rgba(217,255,0,0.25)]">
           <LockKeyhole className="size-4" />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-medium">{title}</div>
+          <div className="font-heading text-sm font-bold tracking-tight text-foreground uppercase">{title}</div>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
             {authEnabled
               ? description
@@ -99,9 +103,9 @@ export function AuthCta({
       </div>
 
       {displayedMessage ? (
-        <div role="alert" className="mt-3 flex items-center gap-2 rounded-md border bg-card px-3 py-2 text-sm text-muted-foreground">
-          <AlertCircle className="size-4 shrink-0 text-amber-500" />
-          <span>{displayedMessage}</span>
+        <div role="alert" className="mt-3 flex items-center gap-2 rounded-sm border-2 border-[var(--warn)] bg-[var(--warn)]/15 px-3 py-2 text-sm text-[var(--warn-ink)] zzz-panel-shadow">
+          <AlertCircle className="size-4 shrink-0 text-[var(--warn)]" />
+          <span className="font-medium">{displayedMessage}</span>
         </div>
       ) : null}
 
@@ -118,7 +122,7 @@ export function AuthCta({
             {busy ? "로그인 중..." : "Google로 로그인"}
           </Button>
         ) : (
-          <Button type="button" variant="outline" disabled className="w-full sm:w-auto text-xs">
+          <Button type="button" variant="outline" disabled className="w-full sm:w-auto text-xs font-mono">
             Demo Mode (인증 비활성)
           </Button>
         )}

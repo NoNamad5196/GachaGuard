@@ -43,17 +43,22 @@ export function PullLogClient({ data }: { data: DashboardData }) {
 
   return (
     <div className="space-y-5" data-screen-label="Pull Log">
-      <section className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <section className="flex flex-col gap-3 rounded-md border border-border/80 bg-[#13161f] p-4.5 sm:flex-row sm:items-end sm:justify-between zzz-panel-shadow">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Pull Log</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 font-mono text-[10.5px] font-bold text-[var(--brand)] uppercase tracking-wider">
+            <span>{"// LOG_STREAM // PULL_HISTORY"}</span>
+          </div>
+          <h1 className="font-heading text-2xl font-black uppercase tracking-tight text-foreground sm:text-3xl">
+            Pull Log
+          </h1>
+          <p className="font-mono text-xs text-muted-foreground">
             배너별 결과와 비용을 검색하고, 잘못 입력한 결과를 바로 고칩니다.
           </p>
         </div>
         <AddPullSheet userBanners={data.userBanners} isDemo={data.isDemo} />
       </section>
 
-      <section className="grid gap-3 sm:grid-cols-3">
+      <section className="grid gap-3.5 sm:grid-cols-3">
         <DesignCard>
           <StatBlock label="표시 비용" value={formatKrw(totalCost)} />
         </DesignCard>
@@ -73,17 +78,17 @@ export function PullLogClient({ data }: { data: DashboardData }) {
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="아이템, 캐릭터, 배너 검색"
-              className="pl-9"
+              className="pl-9 font-mono text-xs"
             />
           </label>
           <select
             value={game}
             onChange={(event) => setGame(event.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+            className="h-8.5 rounded-sm border border-input bg-[var(--surface-sunken)] px-3 font-mono text-xs text-foreground focus-visible:border-[var(--brand)] outline-none"
           >
-            <option value="all">모든 게임</option>
+            <option value="all" className="bg-popover text-popover-foreground">모든 게임</option>
             {data.games.map((item) => (
-              <option key={item.id} value={item.id}>
+              <option key={item.id} value={item.id} className="bg-popover text-popover-foreground">
                 {item.name}
               </option>
             ))}
@@ -91,12 +96,12 @@ export function PullLogClient({ data }: { data: DashboardData }) {
           <select
             value={rarity}
             onChange={(event) => setRarity(event.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+            className="h-8.5 rounded-sm border border-input bg-[var(--surface-sunken)] px-3 font-mono text-xs text-foreground focus-visible:border-[var(--brand)] outline-none"
           >
-            <option value="all">모든 등급</option>
-            <option value="5">5성</option>
-            <option value="4">4성</option>
-            <option value="3">3성</option>
+            <option value="all" className="bg-popover text-popover-foreground">모든 등급</option>
+            <option value="5" className="bg-popover text-popover-foreground">5성</option>
+            <option value="4" className="bg-popover text-popover-foreground">4성</option>
+            <option value="3" className="bg-popover text-popover-foreground">3성</option>
           </select>
         </div>
       </DesignCard>
@@ -107,17 +112,17 @@ export function PullLogClient({ data }: { data: DashboardData }) {
             <div className="hidden overflow-x-auto lg:block">
               <table className="w-full border-collapse text-sm">
                 <thead>
-                  <tr className="border-b bg-[var(--surface-2)] text-left text-[11.5px] uppercase tracking-[0.04em] text-muted-foreground">
-                    <th className="px-4 py-3 font-medium">날짜</th>
-                    <th className="px-4 py-3 font-medium">게임</th>
-                    <th className="px-4 py-3 font-medium">배너</th>
-                    <th className="px-4 py-3 font-medium">결과</th>
-                    <th className="px-4 py-3 text-right font-medium">pity</th>
-                    <th className="px-4 py-3 text-right font-medium">비용</th>
-                    <th className="px-4 py-3 text-right font-medium">관리</th>
+                  <tr className="border-b-2 border-border bg-[var(--surface-2)] text-left font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+                    <th className="px-4 py-3 font-bold">날짜</th>
+                    <th className="px-4 py-3 font-bold">게임</th>
+                    <th className="px-4 py-3 font-bold">배너</th>
+                    <th className="px-4 py-3 font-bold">결과</th>
+                    <th className="px-4 py-3 text-right font-bold">pity</th>
+                    <th className="px-4 py-3 text-right font-bold">비용</th>
+                    <th className="px-4 py-3 text-right font-bold">관리</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="font-mono text-xs">
                   {rows.map((pull) => (
                     <PullRow key={pull.id} pull={pull} isDemo={data.isDemo} />
                   ))}

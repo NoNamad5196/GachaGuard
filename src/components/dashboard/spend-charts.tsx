@@ -17,7 +17,7 @@ import { EmptyState } from "@/components/app/design-system";
 import { formatKrw } from "@/lib/domain/calculations";
 import type { PaymentRecord, UserGame } from "@/lib/domain/dashboard";
 
-const COLORS = ["#1B8A6B", "#B5751E", "#1F5F9C", "#9A7833", "#6E4FA3", "#B42318"];
+const COLORS = ["#d9ff00", "#ff6b00", "#00e5ff", "#ffcb3d", "#ff2e4c", "#b347ff"];
 
 export function SpendCharts({
   payments,
@@ -53,10 +53,17 @@ export function SpendCharts({
 
   return (
     <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-      <div className="h-[260px] rounded-lg border bg-muted/25 p-4">
-        <div className="mb-2 flex items-center justify-between">
-          <h3 className="text-sm font-medium">게임별 지출 비중</h3>
-          <span className="text-xs text-muted-foreground">{byGame.length}개 게임</span>
+      <div className="h-[270px] rounded-sm border-2 border-border bg-card/60 p-4 zzz-panel-shadow">
+        <div className="mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="size-2 bg-[var(--brand)] shadow-[0_0_6px_var(--brand)]" />
+            <h3 className="font-heading text-sm font-bold uppercase tracking-tight text-foreground">
+              게임별 지출 비중
+            </h3>
+          </div>
+          <span className="rounded-sm border border-border bg-muted/60 px-1.5 py-0.5 font-mono text-[10px] font-bold text-muted-foreground">
+            {byGame.length} GAMES
+          </span>
         </div>
         {byGame.length > 0 ? (
           <ResponsiveContainer width="100%" height={210}>
@@ -64,18 +71,25 @@ export function SpendCharts({
               <Tooltip
                 formatter={(value) => formatKrw(Number(value))}
                 contentStyle={{
-                  borderRadius: 8,
-                  border: "1px solid #E7E5E0",
-                  boxShadow: "0 8px 24px rgba(15,17,21,0.08)",
+                  backgroundColor: "#13151b",
+                  border: "2px solid #282e3f",
+                  borderRadius: 4,
+                  boxShadow: "3px 3px 0px #000000",
+                  color: "#f5f7fa",
+                  fontFamily: "monospace",
+                  fontSize: "12px",
                 }}
+                itemStyle={{ color: "#d9ff00", fontWeight: "bold" }}
               />
               <Pie
                 data={byGame}
                 dataKey="value"
                 nameKey="name"
-                innerRadius={54}
-                outerRadius={88}
-                paddingAngle={3}
+                innerRadius={52}
+                outerRadius={86}
+                paddingAngle={4}
+                stroke="#0b0c10"
+                strokeWidth={2}
               >
                 {byGame.map((entry, index) => (
                   <Cell key={entry.name} fill={COLORS[index % COLORS.length]} />
@@ -88,32 +102,49 @@ export function SpendCharts({
         )}
       </div>
 
-      <div className="h-[260px] rounded-lg border bg-muted/25 p-4">
-        <div className="mb-2 flex items-center justify-between">
-          <h3 className="text-sm font-medium">일자별 지출</h3>
-          <span className="text-xs text-muted-foreground">Asia/Seoul 기준</span>
+      <div className="h-[270px] rounded-sm border-2 border-border bg-card/60 p-4 zzz-panel-shadow">
+        <div className="mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="size-2 bg-[var(--info)] shadow-[0_0_6px_var(--info)]" />
+            <h3 className="font-heading text-sm font-bold uppercase tracking-tight text-foreground">
+              일자별 지출
+            </h3>
+          </div>
+          <span className="rounded-sm border border-border bg-muted/60 px-1.5 py-0.5 font-mono text-[10px] font-bold text-muted-foreground">
+            ASIA/SEOUL
+          </span>
         </div>
         {byDay.length > 0 ? (
           <ResponsiveContainer width="100%" height={210}>
             <BarChart data={byDay}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E7E5E0" />
-              <XAxis dataKey="date" tickLine={false} axisLine={false} fontSize={12} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#1f2433" vertical={false} />
+              <XAxis
+                dataKey="date"
+                tickLine={false}
+                axisLine={{ stroke: "#282e3f" }}
+                tick={{ fill: "#8d98af", fontSize: 11, fontFamily: "monospace" }}
+              />
               <YAxis
                 tickLine={false}
-                axisLine={false}
+                axisLine={{ stroke: "#282e3f" }}
                 width={70}
-                fontSize={12}
+                tick={{ fill: "#8d98af", fontSize: 11, fontFamily: "monospace" }}
                 tickFormatter={(value) => `${Math.round(Number(value) / 10000)}만`}
               />
               <Tooltip
                 formatter={(value) => formatKrw(Number(value))}
                 contentStyle={{
-                  borderRadius: 8,
-                  border: "1px solid #E7E5E0",
-                  boxShadow: "0 8px 24px rgba(15,17,21,0.08)",
+                  backgroundColor: "#13151b",
+                  border: "2px solid #282e3f",
+                  borderRadius: 4,
+                  boxShadow: "3px 3px 0px #000000",
+                  color: "#f5f7fa",
+                  fontFamily: "monospace",
+                  fontSize: "12px",
                 }}
+                itemStyle={{ color: "#d9ff00", fontWeight: "bold" }}
               />
-              <Bar dataKey="amount" radius={[6, 6, 2, 2]} fill="#1B8A6B" />
+              <Bar dataKey="amount" radius={[2, 2, 0, 0]} fill="#d9ff00" />
             </BarChart>
           </ResponsiveContainer>
         ) : (

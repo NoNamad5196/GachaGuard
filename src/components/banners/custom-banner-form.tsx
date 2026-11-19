@@ -17,9 +17,14 @@ const DEFAULT_END_DATE = new Intl.DateTimeFormat("en-CA", {
 export function CustomBannerForm({ data }: { data: DashboardData }) {
   return (
     <div className="space-y-5" data-screen-label="Create custom banner">
-      <section className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">배너 직접 등록</h1>
-        <p className="text-sm text-muted-foreground">
+      <section className="flex flex-col gap-2 rounded-sm border-2 border-border bg-card p-4.5 zzz-panel-shadow">
+        <div className="flex items-center gap-2 font-mono text-[10.5px] font-bold text-[var(--brand)] uppercase tracking-wider">
+          <span>{"// DATABASE_INPUT // NEW_CUSTOM_BANNER"}</span>
+        </div>
+        <h1 className="font-heading text-2xl font-black uppercase tracking-tight text-foreground sm:text-3xl">
+          배너 직접 등록
+        </h1>
+        <p className="font-mono text-xs text-muted-foreground">
           마스터 목록에 없는 배너를 내 계정 전용으로 등록합니다. 등록 후 바로 추적을 시작합니다.
         </p>
       </section>
@@ -31,12 +36,12 @@ export function CustomBannerForm({ data }: { data: DashboardData }) {
             <select
               id="gameId"
               name="gameId"
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+              className="h-9 rounded-sm border-2 border-input bg-card/60 px-3 font-mono text-xs text-foreground focus-visible:border-[var(--brand)] outline-none"
               disabled={data.isDemo}
               required
             >
               {data.games.map((game) => (
-                <option key={game.id} value={game.id}>
+                <option key={game.id} value={game.id} className="bg-popover text-popover-foreground">
                   {game.name}
                 </option>
               ))}
@@ -49,11 +54,11 @@ export function CustomBannerForm({ data }: { data: DashboardData }) {
               id="bannerType"
               name="bannerType"
               defaultValue="character"
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+              className="h-9 rounded-sm border-2 border-input bg-card/60 px-3 font-mono text-xs text-foreground focus-visible:border-[var(--brand)] outline-none"
               disabled={data.isDemo}
             >
               {Object.entries(BANNER_TYPE_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
+                <option key={value} value={value} className="bg-popover text-popover-foreground">
                   {label}
                 </option>
               ))}
@@ -106,7 +111,11 @@ export function CustomBannerForm({ data }: { data: DashboardData }) {
           </div>
 
           <div className="flex justify-end lg:col-span-2">
-            <Button type="submit" disabled={data.isDemo || data.games.length === 0}>
+            <Button
+              type="submit"
+              disabled={data.isDemo || data.games.length === 0}
+              className="bg-[var(--brand)] font-heading font-bold uppercase tracking-tight text-[#0b0d11] shadow-[0_0_12px_rgba(212,255,42,0.25)] hover:bg-[var(--brand)]/90"
+            >
               등록하고 추적 시작
             </Button>
           </div>
